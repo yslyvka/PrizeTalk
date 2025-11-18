@@ -1,7 +1,7 @@
 <template>
-  <!-- Homepage content can be added here later -->
+  <HelloWorld msg="Welcome to PrizeTalk" />
 </template>
 
 <script setup>
-// Home page logic here
+import HelloWorld from '../components/HelloWorld.vue'
 </script>
