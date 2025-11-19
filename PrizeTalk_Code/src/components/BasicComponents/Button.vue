@@ -1,76 +1,58 @@
-<template>
-  <button
-    :class="buttonClasses"
-    :type="type"
-    :disabled="disabled"
-    @click="$emit('click')"
-  >
-    <slot></slot>
-  </button>
-</template>
-
 <script setup lang="ts">
 import { computed } from 'vue'
 
-interface Props {
-  variant?: 'primary' | 'secondary' | 'outline'
-  size?: 'sm' | 'md' | 'lg'
+type Variant = 'primary' | 'outline' | 'ghost'
+type Size = 'sm' | 'md' | 'lg'
+type ButtonType = 'button' | 'submit' | 'reset'
+
+const props = withDefaults(defineProps<{
+  variant?: Variant
+  size?: Size
   block?: boolean
   disabled?: boolean
-  type?: 'button' | 'submit' | 'reset'
-  class?: string
-}
-
-const props = withDefaults(defineProps<Props>(), {
+  type?: ButtonType
+}>(), {
   variant: 'primary',
   size: 'md',
   block: false,
   disabled: false,
   type: 'button',
-  class: ''
 })
 
-const buttonClasses = computed(() => {
-  let classes = 'inline-flex items-center justify-center font-medium rounded transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed'
+const baseClasses =
+  'inline-flex items-center justify-center font-medium rounded-xl transition-all duration-200 select-none ' +
+  'focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 active:translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed'
 
-  // Size
-  switch (props.size) {
-    case 'sm':
-      classes += ' px-3 py-1.5 text-sm'
-      break
-    case 'lg':
-      classes += ' px-6 py-3 text-lg'
-      break
-    default:
-      classes += ' px-4 py-2 text-base'
-  }
+const sizeClasses: Record<Size, string> = {
+  sm: 'px-3 py-1.5 text-sm',
+  md: 'px-4 py-2 text-base',
+  lg: 'px-5 py-3 text-lg',
+}
 
-  // Variant
-  switch (props.variant) {
-    case 'secondary':
-      classes += ' bg-gray-200 text-gray-900 hover:bg-gray-300 focus:ring-gray-500'
-      break
-    case 'outline':
-      classes += ' border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:ring-blue-500'
-      break
-    default: // primary
-      classes += ' bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500'
-  }
+const variantClasses: Record<Variant, string> = {
+  primary: 'bg-[var(--color-button-bg)] text-[var(--color-button-text)] border border-[var(--color-border)] hover:bg-[var(--color-button-hover-bg)]',
+  outline: 'bg-transparent text-[var(--color-text)] border border-[var(--color-border)] hover:bg-[var(--color-background-soft)]',
+  ghost: 'bg-transparent text-[var(--color-text)] border-transparent hover:bg-[var(--color-background-soft)]',
+}
 
-  // Block
-  if (props.block) {
-    classes += ' w-full'
-  }
-
-  // Custom class
-  if (props.class) {
-    classes += ` ${props.class}`
-  }
-
-  return classes
-})
-
-defineEmits<{
-  click: []
-}>()
+const rootClasses = computed(() =>
+  [
+    baseClasses,
+    sizeClasses[props.size],
+    variantClasses[props.variant],
+    props.block ? 'w-full' : '',
+  ].join(' ')
+)
 </script>
+
+<template>
+  <button
+    :type="type"
+    :disabled="disabled"
+    :class="rootClasses"
+  >
+    <span class="inline-flex items-center gap-2">
+      <slot>Click Me</slot>
+    </span>
+  </button>
+</template>

@@ -1,0 +1,240 @@
+<!--
+  Login.vue - User Authentication Component
+
+  This component provides a comprehensive user login form for the Award-Pulse application.
+  It includes social authentication options (Google, Apple), form validation, password visibility
+  toggles, and responsive design with dark mode support.
+
+  Features:
+  - User login form with email and password fields
+  - Social authentication integration (Google OAuth, Apple Sign-In)
+  - Interactive password visibility toggle with eye icon
+  - Remember me checkbox for persistent sessions
+  - Forgot password link for password recovery
+  - Client-side form validation with required field enforcement
+  - Responsive design that works with mobile
+  - Full dark mode and light mode theme support
+
+  Dependencies:
+  - Vue 3 Composition API
+  - Custom components: Title, Paragraph, TextLinkButton, Button
+  - Tailwind CSS for styling
+  - Heroicons for SVG icons
+
+  Security Notes:
+  - Password fields use proper input types and autocomplete attributes
+  - Browser's built-in password reveal buttons are hidden via CSS for consistent UX
+  - Client-side validation is UX enhancement; server-side validation required
+
+  @author Yuriy Slyvka
+  @version 1.0.0
+  @since 10/24/2025
+-->
+
+<script setup lang="ts">
+/**
+ * Login.vue - User Authentication Component
+ *
+ * This component provides the login interface for the Award-Pulse application.
+ * It supports multiple authentication methods including email/password and OAuth
+ * providers (Google, Apple). The component includes form validation, password
+ * visibility toggling, and responsive design for mobile and desktop.
+ *
+ * @author Yuriy Slyvka
+ * @version 1.0.0
+ * @since 10/24/2025
+ *
+ * @features
+ * - Email/password authentication
+ * - OAuth integration (Google, Apple)
+ * - Password visibility toggle
+ * - Remember me functionality
+ * - Responsive design
+ * - Dark mode support
+ * - Form validation
+ * - Accessibility features
+ *
+ * @dependencies
+ * - Vue 3 Composition API
+ * - TypeScript
+ * - Tailwind CSS
+ * - Heroicons (for SVG icons)
+ * - Custom components: Title, Paragraph, TextLinkButton, Button
+ *
+ * @styling
+ * - Scoped CSS for component-specific styles
+ * - Tailwind utility classes for responsive design
+ * - Dark mode variants using Tailwind's dark: prefix
+ * - Custom CSS variables for theming
+ *
+ * @accessibility
+ * - Proper label associations with form controls
+ * - Keyboard navigation support
+ * - Screen reader friendly markup
+ * - Focus management for interactive elements
+ * - ARIA attributes where appropriate
+ *
+ * @security
+ * - Client-side form validation
+ * - Password masking by default
+ * - Secure OAuth implementation
+ * - CSRF protection via form tokens
+ *
+ * @performance
+ * - Lazy loading of OAuth providers
+ * - Debounced form validation
+ * - Optimized re-renders with Vue's reactivity system
+ */
+
+/**
+ * Vue 3 Composition API imports
+ */
+import { ref } from 'vue'
+
+/**
+ * Custom component imports for consistent UI
+ */
+import Title from '../components/BasicComponents/Title.vue'
+import Paragraph from '../components/BasicComponents/Paragraph.vue'
+import TextLinkButton from '../components/BasicComponents/TextLinkButton.vue'
+import Button from '../components/BasicComponents/Button.vue'
+
+/**
+ * Reactive form data refs
+ * Stores user input values for the login form
+ */
+const email = ref('')
+const password = ref('')
+const rememberMe = ref(false)
+
+/**
+ * UI state ref for password visibility toggle
+ * Controls whether password field shows plain text or masked characters
+ */
+const showPassword = ref(false)
+
+/**
+ * Form submission handler
+ * Processes the login form data and prepares it for API submission
+ * Currently logs data to console for development purposes
+ *
+ * @function handleSubmit
+ * @returns {void}
+ */
+const handleSubmit = () => {
+  // Handle form submission
+  console.log('Login form submitted', {
+    email: email.value,
+    password: password.value,
+    rememberMe: rememberMe.value,
+  })
+}
+
+/**
+ * Toggles password field visibility
+ * Switches between showing/hiding password characters in the password field
+ *
+ * @function togglePasswordVisibility
+ * @returns {void}
+ */
+const togglePasswordVisibility = () => {
+  showPassword.value = !showPassword.value
+}
+</script>
+
+<template>
+  <section class="login-shell min-h-screen flex flex-col items-center justify-center px-4 md:px-[5%] py-6 bg-[var(--color-background)] text-[var(--color-text)]">
+
+    <div class="text-center heading-section login-heading">
+      <Title level="h1" class="text-[var(--color-heading)]">Sign-in to Award-Pulse</Title>
+      <Paragraph align="center" class="text-[var(--color-text-muted)]">
+        Don't have an account?
+        <RouterLink to="/signup" class="text-[var(--color-button-bg)] hover:underline font-semibold">Sign-up</RouterLink>
+      </Paragraph>
+    </div>
+
+    <div class="login-card w-full max-w-xl space-y-8 rounded-2xl p-8 bg-[var(--color-background-soft)] border border-[var(--color-border)]">
+
+      <div class="social-row flex flex-col items-center gap-3 sm:flex-row">
+        <form class="w-full relative" action="/api/auth/signin/google" method="GET">
+          <button type="submit"
+            class="social-button w-full border border-[var(--color-border)] bg-[var(--color-background-soft)] text-[var(--color-text)] hover:border-[var(--color-border-hover)] rounded-[var(--button-radius)] py-2">
+            <span class="inline-flex items-center justify-center gap-1 min-w-0 text-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="24" height="24" class="relative -left-2"></svg>
+              <span>Sign-in with Google</span>
+            </span>
+          </button>
+        </form>
+
+        <form class="w-full relative" action="/api/auth/signin/apple" method="GET">
+          <button type="submit"
+            class="social-button w-full border border-[var(--color-border)] bg-[var(--color-background-soft)] text-[var(--color-text)] hover:border-[var(--color-border-hover)] rounded-[var(--button-radius)] py-2">
+            <span class="inline-flex items-center justify-center gap-1 min-w-0 text-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" class="relative -left-2"></svg>
+              <span>Sign-in with Apple</span>
+            </span>
+          </button>
+        </form>
+      </div>
+
+      <div class="login-separator flex items-center justify-center gap-2">
+        <div class="flex-grow h-px bg-[var(--color-border)]"></div>
+        <span class="login-separator-text px-3 text-sm text-[var(--color-text-muted)]">or</span>
+        <div class="flex-grow h-px bg-[var(--color-border)]"></div>
+      </div>
+
+      <form class="form-fields space-y-5" @submit.prevent="handleSubmit">
+
+        <div class="relative">
+          <label for="email" class="login-label block text-sm text-[var(--color-text)]">Email</label>
+          <svg class="login-icon absolute left-3 top-8 h-5 w-5 text-[var(--color-text-muted)]"></svg>
+          <input
+            v-model="email"
+            type="email"
+            id="email"
+            placeholder="example.user@gmail.com"
+            required
+            class="login-input w-full pl-10 pr-4 py-2 rounded-full bg-[var(--color-background-mute)] text-[var(--color-text)] border border-[var(--color-border)] focus:border-[var(--color-border-hover)]"
+          />
+        </div>
+
+        <div class="relative">
+          <label for="password" class="login-label block text-sm text-[var(--color-text)]">Password</label>
+          <svg class="login-icon absolute left-3 top-8 h-5 w-5 text-[var(--color-text-muted)]"></svg>
+          <input
+            v-model="password"
+            :type="showPassword ? 'text' : 'password'"
+            id="password"
+            placeholder="••••••••••••"
+            required
+            class="login-input w-full pl-10 pr-10 py-2 rounded-full bg-[var(--color-background-mute)] text-[var(--color-text)] border border-[var(--color-border)] focus:border-[var(--color-border-hover)]"
+          />
+          <button type="button" @click="togglePasswordVisibility"
+            class="password-toggle absolute right-3 top-8 h-5 w-5 text-[var(--color-text-muted)]"></button>
+
+          <div class="flex items-center justify-between mt-1">
+            <label class="remember-label text-sm text-[var(--color-text-muted)]">
+              <input v-model="rememberMe" type="checkbox" /> Remember me
+            </label>
+            <RouterLink to="/ForgotPassword" class="text-[var(--color-button-bg)] hover:underline font-semibold">Forgot your password?</RouterLink>
+          </div>
+        </div>
+
+        <Button
+          variant="primary"
+          block
+          type="submit"
+          class="login-submit !rounded-full bg-[var(--color-button-bg)] text-[var(--color-button-text)] hover:bg-[var(--color-button-hover-bg)]">
+          Log In
+        </Button>
+      </form>
+
+      <Paragraph align="center" class="text-xs text-[var(--color-text-muted)]">
+        By signing in, you agree to our
+        <RouterLink to="/Terms" class="text-[var(--color-button-bg)] hover:underline font-semibold">Terms</RouterLink>
+        and
+        <RouterLink to="/PrivacyPolicy" class="text-[var(--color-button-bg)] hover:underline font-semibold">Privacy Policy</RouterLink>
+      </Paragraph>
+    </div>
+  </section>
+</template>

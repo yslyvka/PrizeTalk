@@ -1,17 +1,33 @@
-<template>
-  <p :class="`text-base ${class}`" :style="align === 'center' ? 'text-align: center' : align === 'right' ? 'text-align: right' : 'text-align: left'">
-    <slot></slot>
-  </p>
-</template>
-
 <script setup lang="ts">
-interface Props {
-  align?: 'left' | 'center' | 'right'
-  class?: string
+import { computed } from 'vue'
+
+type Tone = 'normal' | 'muted' | 'lead'
+type Align = 'left' | 'center' | 'right'
+
+const props = withDefaults(defineProps<{
+  tone?: Tone
+  align?: Align
+}>(), {
+  tone: 'normal',
+  align: 'left',
+})
+
+const toneClasses: Record<Tone, string> = {
+  normal: 'paragraph paragraph--normal',
+  muted: 'paragraph paragraph--muted',
+  lead: 'paragraph paragraph--lead text-lg',
 }
 
-withDefaults(defineProps<Props>(), {
-  align: 'left',
-  class: ''
-})
+const cls = computed(() => [
+  'font-sans leading-relaxed',
+  toneClasses[props.tone],
+  props.align === 'center' ? 'text-center' : props.align === 'right' ? 'text-right' : 'text-left',
+].join(' '))
 </script>
+
+<template>
+  <p :class="cls">
+    <slot />
+  </p>
+  
+</template>

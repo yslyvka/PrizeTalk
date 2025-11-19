@@ -1,28 +1,32 @@
-<template>
-  <component :is="`h${level}`" :class="`font-bold ${class}`" :style="`font-size: ${size}`">
-    <slot></slot>
-  </component>
-</template>
-
 <script setup lang="ts">
 import { computed } from 'vue'
 
-interface Props {
-  level?: number
-  class?: string
+type Level = 'h1' | 'h2' | 'h3'
+type Align = 'left' | 'center' | 'right'
+
+const props = withDefaults(defineProps<{
+  level?: Level
+  align?: Align
+}>(), {
+  level: 'h1',
+  align: 'left',
+})
+
+const sizes: Record<Level, string> = {
+  h1: 'text-4xl sm:text-5xl font-extrabold',
+  h2: 'text-3xl sm:text-4xl font-bold',
+  h3: 'text-2xl sm:text-3xl font-semibold',
 }
 
-const props = withDefaults(defineProps<Props>(), {
-  level: 1,
-  class: ''
-})
-
-const size = computed(() => {
-  switch (props.level) {
-    case 1: return '2rem'
-    case 2: return '1.5rem'
-    case 3: return '1.25rem'
-    default: return '1rem'
-  }
-})
+const cls = computed(() => [
+  'title font-sans tracking-tight',
+  sizes[props.level],
+  props.align === 'center' ? 'text-center' : props.align === 'right' ? 'text-right' : 'text-left',
+].join(' '))
 </script>
+
+<template>
+  <component :is="props.level" :class="cls">
+    <slot />
+  </component>
+</template>

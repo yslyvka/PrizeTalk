@@ -2,7 +2,7 @@ import mysql.connector
 from mysql.connector import Error
 import pandas as pd
 from sqlalchemy import create_engine
-import bcrypt
+#import bcrypt
 
 # --- Database connection configuration ---
 configuration = {
@@ -37,6 +37,42 @@ def create_tables(cursor):
         );
     """)
 
+    # Award categories table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS award_categories (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            category_name VARCHAR(255) NOT NULL,
+            award_name VARCHAR(255) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+
+    # Community posts table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS community_posts (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            title VARCHAR(255) NOT NULL,
+            content TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+    """)
+
+    # Post comments table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS post_comments (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            post_id INT NOT NULL,
+            user_id INT NOT NULL,
+            comment_text TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (post_id) REFERENCES community_posts(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+    """)
+
 # --- CSV Import using pandas ---
 def import_csv_with_pandas(table_name, csv_file):
     print(f"📥 Importing {csv_file} into {table_name}...")
@@ -59,13 +95,13 @@ def import_csv_with_pandas(table_name, csv_file):
     print(f"✅ Imported {len(df)} rows into {table_name}")
 
 # --- Simple login system setup ---
-def setup_login_system(cursor):
-    # Insert a sample user (with properly hashed password)
-    hashed_password = bcrypt.hashpw("adminpassword".encode(), bcrypt.gensalt()).decode()
-    cursor.execute("""
-        REPLACE INTO users (username, password_hash, email)
-        VALUES (%s, %s, %s)
-    """, ("admin", hashed_password, "admin@example.com"))
+# def setup_login_system(cursor):
+#     # Insert a sample user (with properly hashed password)
+#     hashed_password = bcrypt.hashpw("adminpassword".encode(), bcrypt.gensalt()).decode()
+#     cursor.execute("""
+#         REPLACE INTO users (username, password_hash, email)
+#         VALUES (%s, %s, %s)
+#     """, ("admin", hashed_password, "admin@example.com"))
 
 # --- Query runner ---
 def run_query(cursor, name, sql, params=None, limit_print=None):
@@ -98,7 +134,7 @@ def main():
         create_tables(cursor)
 
         # Step 2: Setup login system
-        setup_login_system(cursor)
+        # setup_login_system(cursor)
 
         # Step 3: Import CSVs
         for table_name, csv_file in CSV_FILES.items():
