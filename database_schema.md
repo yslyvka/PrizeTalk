@@ -10,22 +10,30 @@
 - created_at
 
 ### booker_prize
-- [Dynamic columns from CSV]
+- SL. NO. (PK)
+- [Other dynamic columns from CSV]
 
 ### golden_globes
-- [Dynamic columns from CSV]
+- (index) (PK)
+- [Other dynamic columns from CSV]
 
 ### grammy
-- [Dynamic columns from CSV]
+- (index) (PK)
+- [Other dynamic columns from CSV]
 
 ### nobel_laureates
-- [Dynamic columns from CSV]
+- id (PK)
+- [Other dynamic columns from CSV]
 
 ### nobel_prizes
-- [Dynamic columns from CSV]
+- awardYear (PK, part of composite)
+- category.en (PK, part of composite)
+- [Other dynamic columns from CSV]
 
 ### oscars
-- [Dynamic columns from CSV]
+- Ceremony (PK, part of composite)
+- Category (PK, part of composite)
+- [Other dynamic columns from CSV]
 
 ### award_categories
 - id (PK)
@@ -36,6 +44,7 @@
 ### community_posts
 - id (PK)
 - user_id (FK → users.id)
+- category_id (FK → award_categories.id)
 - title
 - content
 - created_at
@@ -50,6 +59,8 @@
 
 ## Relationships
 
+- award_categories (implicit one-to-many relation to prize tables via award_name matching)
+- award_categories one-to-many community_posts
 - users one-to-many community_posts
 - users one-to-many post_comments
 - community_posts one-to-many post_comments
