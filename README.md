@@ -42,7 +42,27 @@ PrizeTalk is a web platform for exploring **winners of major global awards** suc
 
 ## 🗄️ Database Schema and Other Info
 
-TBD
+Steps to use the Schema:
+
+1. Go to website: app.eraser.io
+
+2. Click on the "Canvas" tab at the top.
+
+3. On the tool bar to the left, click on the "+" and then click on "Diagram as Code".
+
+4. Click on "Entity Relationship".
+
+5. Once the diagram and code tab pops up, copy and paste the code from the "database_schema_code.txt" and paste it into the coding tab and click of so that it renders.
+
+6. Read the documentation that the website provides on what the code means.
+
+Steps to Export the Schema as an image:
+
+1. Right click on the diagram and then left click on it.
+
+2. Click on "Export Selection".
+
+3. Click the blue "Export" button to download as a PNG.
 
 ---
 

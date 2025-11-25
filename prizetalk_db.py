@@ -91,7 +91,17 @@ def import_csv_with_pandas(table_name, csv_file, cursor):
         df = pd.read_csv(csv_file)
     except pd.errors.ParserError:
         # Try with tab delimiter if comma fails
-        df = pd.read_csv(csv_file, sep='\t')
+        try:
+            df = pd.read_csv(csv_file, sep='\t')
+        except Exception as e:
+            print(f"❌ Failed to read {csv_file}: {e}")
+            return
+    except FileNotFoundError:
+        print(f"❌ File not found: {csv_file}")
+        return
+    except Exception as e:
+        print(f"❌ Error reading {csv_file}: {e}")
+        return
 
     # Clean column names: strip spaces, replace spaces with underscores, remove special chars
     df.columns = df.columns.str.strip().str.replace(' ', '_').str.replace('.', '_').str.replace('(', '').str.replace(')', '').str.replace('Only_fiction_novels', 'Only_fiction_novels')
@@ -102,19 +112,47 @@ def import_csv_with_pandas(table_name, csv_file, cursor):
         f"mysql+mysqlconnector://{configuration['user']}:{password}@{configuration['host']}:{configuration['port']}/{configuration['database']}"
     )
 
-    df.to_sql(table_name, con=engine, if_exists="replace", index=False, chunksize=5000)
-    print(f"✅ Imported {len(df)} rows into {table_name}")
+    try:
+        df.to_sql(table_name, con=engine, if_exists="replace", index=False, chunksize=5000)
+        print(f"✅ Imported {len(df)} rows into {table_name}")
+    except Exception as e:
+        print(f"❌ Failed to import into {table_name}: {e}")
+        return
 
     # Add award_id if applicable
     if table_name in AWARD_MAPPING:
         award_name = AWARD_MAPPING[table_name]
-        cursor.execute(f"ALTER TABLE {table_name} ADD COLUMN award_id INT")
-        cursor.execute(f"""
-            UPDATE {table_name}
-            SET award_id = (SELECT id FROM award_categories WHERE award_name = %s)
-        """, (award_name,))
-        cursor.execute(f"ALTER TABLE {table_name} ADD FOREIGN KEY (award_id) REFERENCES award_categories(id)")
-        print(f"✅ Added award_id FK to {table_name}")
+        try:
+            # Drop existing FK if any
+            cursor.execute(f"""
+                SELECT CONSTRAINT_NAME FROM information_schema.TABLE_CONSTRAINTS
+                WHERE TABLE_NAME = '{table_name}' AND CONSTRAINT_TYPE = 'FOREIGN KEY'
+            """)
+            fk_result = cursor.fetchone()
+            if fk_result:
+                fk_name = fk_result[0]
+                cursor.execute(f"ALTER TABLE {table_name} DROP FOREIGN KEY {fk_name}")
+            
+            # Drop column if exists
+            cursor.execute(f"SHOW COLUMNS FROM {table_name} LIKE 'award_id'")
+            if cursor.fetchone():
+                cursor.execute(f"ALTER TABLE {table_name} DROP COLUMN award_id")
+            
+            # Add column
+            cursor.execute(f"ALTER TABLE {table_name} ADD COLUMN award_id INT")
+            
+            # Update values
+            cursor.execute(f"""
+                UPDATE {table_name}
+                SET award_id = (SELECT id FROM award_categories WHERE award_name = %s)
+            """, (award_name,))
+            
+            # Add FK
+            cursor.execute(f"ALTER TABLE {table_name} ADD FOREIGN KEY (award_id) REFERENCES award_categories(id)")
+            
+            print(f"✅ Added award_id FK to {table_name}")
+        except Exception as e:
+            print(f"❌ Failed to add award_id to {table_name}: {e}")
 
 def populate_award_categories(cursor):
     awards = [
