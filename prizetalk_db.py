@@ -24,6 +24,15 @@ CSV_FILES = {
     "oscars": "Public_Data/oscars.csv"
 }
 
+AWARD_MAPPING = {
+    "booker_prize": "Booker Prize",
+    "golden_globes": "Golden Globes",
+    "grammy": "Grammy",
+    "nobel_laureates": "Nobel Prizes",
+    "nobel_prizes": "Nobel Prizes",
+    "oscars": "Oscars"
+}
+
 # --- Schema creation ---
 def create_tables(cursor):
     # Users table for login system
@@ -52,11 +61,13 @@ def create_tables(cursor):
         CREATE TABLE IF NOT EXISTS community_posts (
             id INT AUTO_INCREMENT PRIMARY KEY,
             user_id INT NOT NULL,
+            category_id INT NOT NULL,
             title VARCHAR(255) NOT NULL,
             content TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (category_id) REFERENCES award_categories(id) ON DELETE CASCADE
         );
     """)
 
@@ -74,7 +85,7 @@ def create_tables(cursor):
     """)
 
 # --- CSV Import using pandas ---
-def import_csv_with_pandas(table_name, csv_file):
+def import_csv_with_pandas(table_name, csv_file, cursor):
     print(f"📥 Importing {csv_file} into {table_name}...")
     try:
         df = pd.read_csv(csv_file)
@@ -94,14 +105,30 @@ def import_csv_with_pandas(table_name, csv_file):
     df.to_sql(table_name, con=engine, if_exists="replace", index=False, chunksize=5000)
     print(f"✅ Imported {len(df)} rows into {table_name}")
 
-# --- Simple login system setup ---
-# def setup_login_system(cursor):
-#     # Insert a sample user (with properly hashed password)
-#     hashed_password = bcrypt.hashpw("adminpassword".encode(), bcrypt.gensalt()).decode()
-#     cursor.execute("""
-#         REPLACE INTO users (username, password_hash, email)
-#         VALUES (%s, %s, %s)
-#     """, ("admin", hashed_password, "admin@example.com"))
+    # Add award_id if applicable
+    if table_name in AWARD_MAPPING:
+        award_name = AWARD_MAPPING[table_name]
+        cursor.execute(f"ALTER TABLE {table_name} ADD COLUMN award_id INT")
+        cursor.execute(f"""
+            UPDATE {table_name}
+            SET award_id = (SELECT id FROM award_categories WHERE award_name = %s)
+        """, (award_name,))
+        cursor.execute(f"ALTER TABLE {table_name} ADD FOREIGN KEY (award_id) REFERENCES award_categories(id)")
+        print(f"✅ Added award_id FK to {table_name}")
+
+def populate_award_categories(cursor):
+    awards = [
+        ('Booker Prize', 'Literature'),
+        ('Golden Globes', 'Entertainment'),
+        ('Grammy', 'Music'),
+        ('Nobel Prizes', 'Science/Literature/Peace'),
+        ('Oscars', 'Film')
+    ]
+    for award_name, category in awards:
+        cursor.execute("""
+            INSERT IGNORE INTO award_categories (award_name, category_name)
+            VALUES (%s, %s)
+        """, (award_name, category))
 
 # --- Query runner ---
 def run_query(cursor, name, sql, params=None, limit_print=None):
@@ -133,12 +160,15 @@ def main():
         # Step 1: Create tables
         create_tables(cursor)
 
+        # Populate award categories
+        populate_award_categories(cursor)
+
         # Step 2: Setup login system
         # setup_login_system(cursor)
 
         # Step 3: Import CSVs
         for table_name, csv_file in CSV_FILES.items():
-            import_csv_with_pandas(table_name, csv_file)
+            import_csv_with_pandas(table_name, csv_file, cursor)
 
         conn.commit()
 

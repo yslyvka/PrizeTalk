@@ -1,0 +1,233 @@
+users [icon: user, color: blue] {
+  id number pk
+  username string
+  password_hash string
+  email string
+  created_at timestamp
+}
+
+booker_prize [icon: trophy, color: gold] {
+  award_id number
+  SL_NO number pk
+  YEAR number
+  WINNER string
+  NOVEL string
+  LENGTH_OF_BOOK number
+  LENGTH_OF_BOOK_BIN string
+  GENDER string
+  BIRTH_YEAR number
+  AGE_WHEN_WON number
+  AGE_BIN string
+  GENRE string
+  NATIONALITY_AT_TIME_OF_VICTORY string
+  COUNTRY_OF_BIRTH string
+  PUBLISHER string
+  ALMA_MATER string
+  BOOK_NO_THAT_WON number
+}
+
+golden_globes [icon: trophy, color: gold] {
+  award_id number
+  index number pk
+  nominee_type string
+  year number
+  winner boolean
+  award string
+  title string
+}
+
+grammy [icon: trophy, color: gold] {
+  award_id number
+  index number pk
+  Year number
+  Ceremony number
+  Award_ID number
+  Award_Type string
+  Award_Name string
+  Work string
+  Nominee string
+  Winner boolean
+}
+
+nobel_laureates [icon: trophy, color: gold] {
+  award_id number
+  id number pk
+  fileName string
+  gender string
+  sameAs string
+  links string
+  nobelPrizes string
+  knownName_en string
+  knownName_se string
+  givenName_en string
+  givenName_se string
+  familyName_en string
+  familyName_se string
+  fullName_en string
+  fullName_se string
+  birth_date string
+  birth_place_city_en string
+  birth_place_city_no string
+  birth_place_city_se string
+  birth_place_country_en string
+  birth_place_country_no string
+  birth_place_country_se string
+  birth_place_cityNow_en string
+  birth_place_cityNow_no string
+  birth_place_cityNow_se string
+  birth_place_cityNow_sameAs string
+  birth_place_cityNow_latitude number
+  birth_place_cityNow_longitude number
+  birth_place_countryNow_en string
+  birth_place_countryNow_no string
+  birth_place_countryNow_se string
+  birth_place_countryNow_sameAs string
+  birth_place_countryNow_latitude number
+  birth_place_countryNow_longitude number
+  birth_place_continent_en string
+  birth_place_continent_no string
+  birth_place_continent_se string
+  birth_place_locationString_en string
+  birth_place_locationString_no string
+  birth_place_locationString_se string
+  wikipedia_slug string
+  wikipedia_english string
+  wikidata_id string
+  wikidata_url string
+  death_date string
+  death_place_city_en string
+  death_place_city_no string
+  death_place_city_se string
+  death_place_country_en string
+  death_place_country_no string
+  death_place_country_se string
+  death_place_country_sameAs string
+  death_place_cityNow_en string
+  death_place_cityNow_no string
+  death_place_cityNow_se string
+  death_place_cityNow_sameAs string
+  death_place_cityNow_latitude number
+  death_place_cityNow_longitude number
+  death_place_countryNow_en string
+  death_place_countryNow_no string
+  death_place_countryNow_se string
+  death_place_countryNow_sameAs string
+  death_place_countryNow_latitude number
+  death_place_countryNow_longitude number
+  death_place_continent_en string
+  death_place_continent_no string
+  death_place_continent_se string
+  death_place_locationString_en string
+  death_place_locationString_no string
+  death_place_locationString_se string
+  knownName_no string
+  givenName_no string
+  familyName_no string
+  fullName_no string
+  acronym string
+  orgName_en string
+  orgName_no string
+  orgName_se string
+  founded_date string
+  founded_place_city_en string
+  founded_place_city_no string
+  founded_place_city_se string
+  founded_place_country_en string
+  founded_place_country_no string
+  founded_place_country_se string
+  founded_place_country_sameAs string
+  founded_place_cityNow_en string
+  founded_place_cityNow_no string
+  founded_place_cityNow_se string
+  founded_place_cityNow_sameAs string
+  founded_place_countryNow_en string
+  founded_place_countryNow_no string
+  founded_place_countryNow_se string
+  founded_place_countryNow_sameAs string
+  founded_place_continent_en string
+  founded_place_continent_no string
+  founded_place_continent_se string
+  founded_place_locationString_en string
+  founded_place_locationString_no string
+  founded_place_locationString_se string
+  nativeName string
+  penName string
+  penNameOf_fullName string
+  foundedCountry_en string
+  foundedCountry_no string
+  foundedCountry_se string
+  foundedCountryNow_en string
+  foundedCountryNow_no string
+  foundedCountryNow_se string
+  foundedContinent_en string
+}
+
+nobel_prizes [icon: trophy, color: gold] {
+  award_id number
+  awardYear number pk
+  category_en string pk
+  dateAwarded string
+  prizeAmount number
+  prizeAmountAdjusted number
+  links string
+  laureates string
+  categoryFullName_en string
+  categoryFullName_no string
+  categoryFullName_se string
+  topMotivation_en string
+  topMotivation_se string
+}
+
+oscars [icon: trophy, color: gold] {
+  award_id number
+  Ceremony number pk
+  Category string pk
+  Year string
+  Class string
+  CanonicalCategory string
+  Film string
+  FilmId string
+  Name string
+  Nominees string
+  NomineeIds string
+  Winner boolean
+  Detail string
+  Note string
+  Citation string
+}
+
+award_categories [icon: tag, color: purple] {
+  id number pk
+  category_name string
+  award_name string
+  created_at timestamp
+}
+
+community_posts [icon: message-square, color: green] {
+  id number pk
+  user_id number
+  category_id number
+  title string
+  content string
+  created_at timestamp
+  updated_at timestamp
+}
+
+post_comments [icon: message-circle, color: green] {
+  id number pk
+  post_id number
+  user_id number
+  comment_text string
+  created_at timestamp
+}
+
+booker_prize.award_id > award_categories.id
+golden_globes.award_id > award_categories.id
+grammy.award_id > award_categories.id
+nobel_laureates.award_id > award_categories.id
+nobel_prizes.award_id > award_categories.id
+oscars.award_id > award_categories.id
+users.id < community_posts.user_id
+users.id < post_comments.user_id
+award_categories.id < community_posts.category_id
+community_posts.id < post_comments.post_id
