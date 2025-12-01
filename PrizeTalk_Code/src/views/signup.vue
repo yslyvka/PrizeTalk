@@ -61,13 +61,12 @@
 
         <div class="relative">
           <label class="signup-label block text-sm text-[var(--color-text)]">First Name</label>
-          <svg class="signup-icon absolute left-3 top-8 h-5 w-5 text-[var(--color-text-muted)]"></svg>
           <input
             v-model="firstName"
             type="text"
             placeholder="John"
             required
-            class="signup-input w-full pl-10 pr-4 py-2 rounded-full
+            class="signup-input w-full px-4 py-2 rounded-full
                    bg-[var(--color-background-mute)]
                    border border-[var(--color-border)]
                    text-[var(--color-text)]
@@ -77,13 +76,12 @@
 
         <div class="relative">
           <label class="signup-label block text-sm text-[var(--color-text)]">Last Name</label>
-          <svg class="signup-icon absolute left-3 top-8 h-5 w-5 text-[var(--color-text-muted)]"></svg>
           <input
             v-model="lastName"
             type="text"
             placeholder="Doe"
             required
-            class="signup-input w-full pl-10 pr-4 py-2 rounded-full
+            class="signup-input w-full px-4 py-2 rounded-full
                    bg-[var(--color-background-mute)]
                    border border-[var(--color-border)]
                    text-[var(--color-text)]
@@ -93,13 +91,12 @@
 
         <div class="relative">
           <label class="signup-label block text-sm text-[var(--color-text)]">Email</label>
-          <svg class="signup-icon absolute left-3 top-8 h-5 w-5 text-[var(--color-text-muted)]"></svg>
           <input
             v-model="email"
             type="email"
             placeholder="example.user@gmail.com"
             required
-            class="signup-input w-full pl-10 pr-4 py-2 rounded-full
+            class="signup-input w-full px-4 py-2 rounded-full
                    bg-[var(--color-background-mute)]
                    border border-[var(--color-border)]
                    text-[var(--color-text)]
@@ -119,52 +116,44 @@
                    focus:border-[var(--color-border-hover)]"
           >
             <option value="" disabled>Select a role</option>
-            <option value="staff_admin">Staff Admin</option>
+            <option
+              v-for="option in roleOptions"
+              :key="option.value"
+              :value="option.value"
+            >
+              {{ option.label }}
+            </option>
           </select>
         </div>
 
         <div class="relative">
           <label class="signup-label block text-sm text-[var(--color-text)]">Password</label>
-          <svg class="signup-icon absolute left-3 top-8 h-5 w-5 text-[var(--color-text-muted)]"></svg>
           <input
             v-model="password"
-            :type="showPassword ? 'text' : 'password'"
+            type="password"
             placeholder="••••••••••••"
             required
-            class="signup-input w-full pl-10 pr-10 py-2 rounded-full
+            class="signup-input w-full px-4 py-2 rounded-full
                    bg-[var(--color-background-mute)]
                    border border-[var(--color-border)]
                    text-[var(--color-text)]
                    focus:border-[var(--color-border-hover)]"
           />
-          <button
-            type="button"
-            @click="togglePasswordVisibility"
-            class="password-toggle absolute right-3 top-8 h-5 w-5 text-[var(--color-text-muted)]"
-            :class="{ 'is-active': showPassword }"
-          ></button>
         </div>
 
         <div class="relative">
           <label class="signup-label block text-sm text-[var(--color-text)]">Confirm Password</label>
-          <svg class="signup-icon absolute left-3 top-8 h-5 w-5 text-[var(--color-text-muted)]"></svg>
           <input
             v-model="confirmPassword"
-            :type="showConfirmPassword ? 'text' : 'password'"
+            type="password"
             placeholder="••••••••••••"
             required
-            class="signup-input w-full pl-10 pr-10 py-2 rounded-full
+            class="signup-input w-full px-4 py-2 rounded-full
                    bg-[var(--color-background-mute)]
                    border border-[var(--color-border)]
                    text-[var(--color-text)]
                    focus:border-[var(--color-border-hover)]"
           />
-          <button
-            type="button"
-            @click="toggleConfirmPasswordVisibility"
-            class="password-toggle absolute right-3 top-8 h-5 w-5 text-[var(--color-text-muted)]"
-            :class="{ 'is-active': showConfirmPassword }"
-          ></button>
         </div>
 
         <Button
@@ -213,7 +202,15 @@ const lastName = ref('')
 const email = ref('')
 const password = ref('')
 const confirmPassword = ref('')
-const role = ref('')
+const roleOptions = [
+  { value: 'staff_admin', label: 'Staff Admin' },
+  { value: 'admin', label: 'Administrator' },
+  { value: 'moderator', label: 'Moderator' },
+  { value: 'data_curator', label: 'Data Curator' },
+  { value: 'user', label: 'Member' },
+]
+const defaultRole = roleOptions[0]?.value || 'staff_admin'
+const role = ref(defaultRole)
 const isSubmitting = ref(false)
 const submitError = ref('')
 const submitSuccess = ref('')
@@ -224,9 +221,6 @@ const API_BASE_URL = (
   import.meta.env.VITE_API_PROXY_TARGET ||
   ''
 ).replace(/\/+$/, '')
-
-const showPassword = ref(false)
-const showConfirmPassword = ref(false)
 
 const handleSubmit = () => {
   submitError.value = ''
@@ -240,39 +234,46 @@ const handleSubmit = () => {
   isSubmitting.value = true
 
   axios
-    .post(`${API_BASE_URL}/api/auth/signup/staff-admin/`, {
+    .post(`${API_BASE_URL}/api/auth/signup/`, {
       firstName: firstName.value,
       lastName: lastName.value,
       email: email.value,
       password: password.value,
+      role: role.value,
     })
-    .then(() => {
-      submitSuccess.value = 'Staff admin account created successfully.'
+    .then(({ data }) => {
+      submitError.value = ''
+      submitSuccess.value = data?.message || 'Account created successfully.'
 
       try {
         const payload = {
           email: email.value,
-          role: 'staff_admin',
+          role: data?.user?.role || role.value,
           firstName: firstName.value,
           lastName: lastName.value,
         }
         window.localStorage.setItem('ap_staff_auth', JSON.stringify(payload))
+        window.localStorage.setItem('loggedIn', 'true')
         window.dispatchEvent(
           new CustomEvent('staff-auth-changed', {
             detail: { isLoggedIn: true, user: payload },
           }),
         )
+        window.dispatchEvent(new Event('auth-state-changed'))
       } catch (e) {
         console.error('Failed to persist staff auth state', e)
       }
 
-      router.push({ name: 'admin-dashboard' })
+      router.push('/awards')
     })
     .catch((error) => {
       console.error(error)
+      submitSuccess.value = ''
       if (error.response?.data?.errors) {
         const errs = error.response.data.errors
         submitError.value = Object.values(errs).join(' ')
+      } else if (error.response?.data?.message) {
+        submitError.value = error.response.data.message
       } else {
         submitError.value = 'Failed to create account. Please try again.'
       }
@@ -280,14 +281,6 @@ const handleSubmit = () => {
     .finally(() => {
       isSubmitting.value = false
     })
-}
-
-const togglePasswordVisibility = () => {
-  showPassword.value = !showPassword.value
-}
-
-const toggleConfirmPasswordVisibility = () => {
-  showConfirmPassword.value = !showConfirmPassword.value
 }
 </script>
 
@@ -300,42 +293,6 @@ const toggleConfirmPasswordVisibility = () => {
   max-width: 100%;
 }
 
-.password-toggle {
-  background: none;
-  border: none;
-  cursor: pointer;
-}
-
-.password-toggle::before {
-  content: '';
-  display: inline-block;
-  width: 20px;
-  height: 20px;
-  mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24"><path d="M2.25 12s3.75-6 9.75-6 9.75 6 9.75 6-3.75 6-9.75 6-9.75-6-9.75-6Z"/><path d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg>') no-repeat center;
-  background-color: currentColor;
-}
-
-.password-toggle.is-active::before {
-  mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24"><path d="M3.98 8.223A10.477 10.477 0 0 0 2.25 12c0 1.003.138 1.972.396 2.887M6.228 6.228C7.79 4.82 9.795 3.75 12 3.75c6 0 9.75 6 9.75 6a10.516 10.516 0 0 1-1.459 1.905M9.53 9.53a3 3 0 0 0 4.943 3.355M9.53 9.53 12 12m0 0 2.47 2.47M12 12l-3.75 3.75M12 12l3.75-3.75M4.5 19.5 19.5 4.5"/></svg>') no-repeat center;
-}
-
-.password-toggle:focus {
-  outline: none;
-}
-
-.password-toggle:focus-visible {
-  outline: 2px solid var(--color-button-bg);
-  outline-offset: 2px;
-}
-
-.password-toggle {
-  transition: color 0.2s ease;
-}
-
-.password-toggle:hover {
-  color: var(--color-button-bg);
-}
-
 .signup-separator {
   display: flex;
 }
@@ -346,5 +303,11 @@ const toggleConfirmPasswordVisibility = () => {
 
 .signup-shell {
   background: var(--color-background);
+}
+
+/* Override to fix field overflow */
+.signup-input {
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
 </style>

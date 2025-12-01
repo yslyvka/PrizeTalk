@@ -11,14 +11,25 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
 const isLoggedIn = ref(false)
 
+const handleAuthEvent = () => {
+  checkLoginStatus()
+}
+
 onMounted(() => {
   checkLoginStatus()
+  window.addEventListener('auth-state-changed', handleAuthEvent)
+  window.addEventListener('storage', handleAuthEvent)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('auth-state-changed', handleAuthEvent)
+  window.removeEventListener('storage', handleAuthEvent)
 })
 
 watch(() => router.currentRoute.value, () => {
@@ -30,9 +41,16 @@ const checkLoginStatus = () => {
 }
 
 const signOut = () => {
-  localStorage.removeItem('loggedIn')
+  localStorage.removeItem('ap_staff_auth')
+  localStorage.removeItem('ap_org_auth')
+  localStorage.removeItem('ap_business_auth')
+  localStorage.setItem('loggedIn', 'false')
   isLoggedIn.value = false
-  router.push('/')
+  window.dispatchEvent(new CustomEvent('staff-auth-changed', { detail: { isLoggedIn: false, user: null } }))
+  window.dispatchEvent(new CustomEvent('org-auth-changed', { detail: { isLoggedIn: false, user: null } }))
+  window.dispatchEvent(new CustomEvent('business-auth-changed', { detail: { isLoggedIn: false, user: null } }))
+  window.dispatchEvent(new Event('auth-state-changed'))
+  router.push('/login')
 }
 </script>
 

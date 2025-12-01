@@ -1,47 +1,54 @@
-users [icon: user, color: blue] {
-  id number pk
+users [icon: user, color: gray] {
+  id int pk
   username string
   password_hash string
   email string
   created_at timestamp
 }
 
-booker_prize [icon: trophy, color: gold] {
-  award_id number
-  SL_NO number pk
-  YEAR number
+award_categories [icon: tag, color: purple] {
+  id int pk
+  category_name string
+  award_name string
+  created_at timestamp
+}
+
+booker_prize [icon: trophy, color: yellow] {
+  award_id int fk > award_categories.id
+  SL_NO int pk
+  YEAR int
   WINNER string
   NOVEL string
-  LENGTH_OF_BOOK number
+  LENGTH_OF_BOOK int
   LENGTH_OF_BOOK_BIN string
   GENDER string
-  BIRTH_YEAR number
-  AGE_WHEN_WON number
+  BIRTH_YEAR int
+  AGE_WHEN_WON int
   AGE_BIN string
   GENRE string
   NATIONALITY_AT_TIME_OF_VICTORY string
   COUNTRY_OF_BIRTH string
   PUBLISHER string
   ALMA_MATER string
-  BOOK_NO_THAT_WON number
+  BOOK_NO_THAT_WON int
 }
 
-golden_globes [icon: trophy, color: gold] {
-  award_id number
-  index number pk
+golden_globes [icon: trophy, color: yellow] {
+  award_id int fk > award_categories.id
+  index int pk
   nominee_type string
-  year number
+  year int
   winner boolean
   award string
   title string
 }
 
-grammy [icon: trophy, color: gold] {
-  award_id number
-  index number pk
-  Year number
-  Ceremony number
-  Award_ID number
+grammy [icon: trophy, color: yellow] {
+  award_id int fk > award_categories.id
+  index int pk
+  Year int
+  Ceremony int
+  Award_ID int
   Award_Type string
   Award_Name string
   Work string
@@ -49,9 +56,9 @@ grammy [icon: trophy, color: gold] {
   Winner boolean
 }
 
-nobel_laureates [icon: trophy, color: gold] {
-  award_id number
-  id number pk
+nobel_laureates [icon: trophy, color: yellow] {
+  award_id int fk > award_categories.id
+  id int pk
   fileName string
   gender string
   sameAs string
@@ -76,14 +83,14 @@ nobel_laureates [icon: trophy, color: gold] {
   birth_place_cityNow_no string
   birth_place_cityNow_se string
   birth_place_cityNow_sameAs string
-  birth_place_cityNow_latitude number
-  birth_place_cityNow_longitude number
+  birth_place_cityNow_latitude int
+  birth_place_cityNow_longitude int
   birth_place_countryNow_en string
   birth_place_countryNow_no string
   birth_place_countryNow_se string
   birth_place_countryNow_sameAs string
-  birth_place_countryNow_latitude number
-  birth_place_countryNow_longitude number
+  birth_place_countryNow_latitude int
+  birth_place_countryNow_longitude int
   birth_place_continent_en string
   birth_place_continent_no string
   birth_place_continent_se string
@@ -106,14 +113,14 @@ nobel_laureates [icon: trophy, color: gold] {
   death_place_cityNow_no string
   death_place_cityNow_se string
   death_place_cityNow_sameAs string
-  death_place_cityNow_latitude number
-  death_place_cityNow_longitude number
+  death_place_cityNow_latitude int
+  death_place_cityNow_longitude int
   death_place_countryNow_en string
   death_place_countryNow_no string
   death_place_countryNow_se string
   death_place_countryNow_sameAs string
-  death_place_countryNow_latitude number
-  death_place_countryNow_longitude number
+  death_place_countryNow_latitude int
+  death_place_countryNow_longitude int
   death_place_continent_en string
   death_place_continent_no string
   death_place_continent_se string
@@ -162,13 +169,13 @@ nobel_laureates [icon: trophy, color: gold] {
   foundedContinent_en string
 }
 
-nobel_prizes [icon: trophy, color: gold] {
-  award_id number
-  awardYear number pk
+nobel_prizes [icon: trophy, color: yellow] {
+  award_id int fk > award_categories.id
+  awardYear int pk
   category_en string pk
   dateAwarded string
-  prizeAmount number
-  prizeAmountAdjusted number
+  prizeAmount int
+  prizeAmountAdjusted int
   links string
   laureates string
   categoryFullName_en string
@@ -178,9 +185,9 @@ nobel_prizes [icon: trophy, color: gold] {
   topMotivation_se string
 }
 
-oscars [icon: trophy, color: gold] {
-  award_id number
-  Ceremony number pk
+oscars [icon: trophy, color: yellow] {
+  award_id int fk > award_categories.id
+  Ceremony int pk
   Category string pk
   Year string
   Class string
@@ -196,17 +203,10 @@ oscars [icon: trophy, color: gold] {
   Citation string
 }
 
-award_categories [icon: tag, color: purple] {
-  id number pk
-  category_name string
-  award_name string
-  created_at timestamp
-}
-
 community_posts [icon: message-square, color: green] {
-  id number pk
-  user_id number
-  category_id number
+  id int pk
+  user_id int fk > users.id
+  category_id int fk > award_categories.id
   title string
   content string
   created_at timestamp
@@ -214,11 +214,128 @@ community_posts [icon: message-square, color: green] {
 }
 
 post_comments [icon: message-circle, color: green] {
-  id number pk
-  post_id number
-  user_id number
+  id int pk
+  post_id int fk > community_posts.id
+  user_id int fk > users.id
   comment_text string
   created_at timestamp
+}
+
+// new Tables
+user_roles [icon: user, color: gray] {
+  id int pk
+  user_id int fk > users.id
+  role enum('user','moderator','admin','data_curator')
+  assigned_at timestamp
+}
+
+discussion_groups [icon: user, color: red]{
+  id int pk
+  name string
+  description string
+  created_by int fk > users.id
+  created_at timestamp
+}
+
+group_memberships [icon: user, color: red] {
+  id int pk
+  group_id int fk > discussion_groups.id
+  user_id int fk > users.id
+  role enum('member','moderator','admin')
+  joined_at timestamp
+}
+// like community posts, but private in a group
+group_posts [icon: user, color: red] {
+  id int pk
+  group_id int fk > discussion_groups.id
+  user_id int fk > users.id
+  title string
+  content string
+  created_at timestamp
+  updated_at timestamp
+}
+// like post comments, but private in a group
+group_post_comments [icon: user, color: red] {
+  id int pk
+  post_id int fk > group_posts.id
+  user_id int fk > users.id
+  parent_comment_id int nullable fk > group_post_comments.id
+  comment_text string
+  created_at timestamp
+}
+
+comment_reviews [icon: user, color: gray] {
+  id int pk
+  comment_id int fk > post_comments.id
+  flagged_by int fk > users.id
+  reason string
+  status enum('pending','approved','removed')
+  reviewed_by int nullable fk > users.id
+  reviewed_at timestamp nullable
+  created_at timestamp
+}
+// users reporting posts for moderation
+post_reports [icon: user, color: gray] {
+  id int pk
+  post_id int fk > community_posts.id
+  reported_by int fk > users.id
+  reason string
+  status enum('pending','reviewed','dismissed')
+  reviewed_by int fk > users.id nullable
+  reviewed_at timestamp nullable
+  created_at timestamp
+}
+
+// Likes and dislikes and such for a post
+reactions [icon: user, color: green] {
+  id int pk
+  user_id int fk > users.id
+  post_id int nullable fk > community_posts.id
+  comment_id int nullable fk > post_comments.id
+  reaction_type enum('like','dislike','applause','insightful')
+  created_at timestamp
+}
+
+reactions_group [icon: user, color: red] {
+  id int pk
+  user_id int fk > users.id
+  post_id int nullable fk > group_posts.id
+  comment_id int nullable fk > group_post_comments.id
+  reaction_type enum('like','dislike','applause','insightful')
+  created_at timestamp
+}
+
+bookmarks [icon: user, color: gray] {
+  id int pk
+  user_id int fk > users.id
+  post_id int nullable fk > community_posts.id
+  award_reference string nullable 
+  created_at timestamp
+}
+
+notifications [icon: user, color: gray] {
+  id int pk
+  user_id int fk > users.id
+  type string
+  content string
+  is_read boolean
+  created_at timestamp
+}
+
+// Users can add tags to posts
+tags [icon: user, color: purple] {
+  id int pk
+  name string unique
+}
+
+post_tags [icon: user, color: purple] {
+  post_id int fk <> community_posts.id
+  tag_id int fk <> tags.id
+}
+
+post_tags_group [icon: user, color: purple] {
+  post_id int fk <> group_posts.id
+  tag_id int fk <> tags.id
 }
 
 booker_prize.award_id > award_categories.id

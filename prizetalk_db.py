@@ -4,6 +4,14 @@ import pandas as pd
 from sqlalchemy import create_engine
 #import bcrypt
 
+ROLE_CHOICES = (
+    'user',
+    'moderator',
+    'admin',
+    'data_curator',
+    'staff_admin',
+)
+
 # --- Database connection configuration ---
 configuration = {
     "host": "127.0.0.1",
@@ -56,6 +64,26 @@ def create_tables(cursor):
         );
     """)
 
+    # Tags table (global tagging system)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS tags (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(100) NOT NULL UNIQUE
+        );
+    """)
+
+    # Discussion groups table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS discussion_groups (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            description TEXT,
+            created_by INT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+        );
+    """)
+
     # Community posts table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS community_posts (
@@ -81,6 +109,185 @@ def create_tables(cursor):
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (post_id) REFERENCES community_posts(id) ON DELETE CASCADE,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+    """)
+
+    # User roles table (one-to-many from users)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS user_roles (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            role ENUM('user','moderator','admin','data_curator','staff_admin') NOT NULL DEFAULT 'user',
+            assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+    """)
+
+    # Ensure the enum definition always contains the latest roles
+    try:
+        enum_values = ",".join(f"'{value}'" for value in ROLE_CHOICES)
+        cursor.execute(
+            f"""
+            ALTER TABLE user_roles
+            MODIFY role ENUM({enum_values}) NOT NULL DEFAULT 'user'
+            """
+        )
+    except Exception as enum_error:
+        print(f"Warning: could not update user_roles enum: {enum_error}")
+
+    # Group memberships table (users join discussion groups)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS group_memberships (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            group_id INT NOT NULL,
+            user_id INT NOT NULL,
+            role ENUM('member','moderator','admin') NOT NULL DEFAULT 'member',
+            joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (group_id) REFERENCES discussion_groups(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            UNIQUE KEY uniq_group_user (group_id, user_id)
+        );
+    """)
+
+    # Group posts table (private posts inside groups)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS group_posts (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            group_id INT NOT NULL,
+            user_id INT NOT NULL,
+            title VARCHAR(255) NOT NULL,
+            content TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            FOREIGN KEY (group_id) REFERENCES discussion_groups(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+    """)
+
+    # Group post comments table (threaded)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS group_post_comments (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            post_id INT NOT NULL,
+            user_id INT NOT NULL,
+            parent_comment_id INT NULL,
+            comment_text TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (post_id) REFERENCES group_posts(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (parent_comment_id) REFERENCES group_post_comments(id) ON DELETE SET NULL
+        );
+    """)
+
+    # Comment reviews table (moderation for public comments)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS comment_reviews (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            comment_id INT NOT NULL,
+            flagged_by INT NOT NULL,
+            reason TEXT,
+            status ENUM('pending','approved','removed') NOT NULL DEFAULT 'pending',
+            reviewed_by INT NULL,
+            reviewed_at TIMESTAMP NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (comment_id) REFERENCES post_comments(id) ON DELETE CASCADE,
+            FOREIGN KEY (flagged_by) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL
+        );
+    """)
+
+    # Post reports table (moderation for posts)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS post_reports (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            post_id INT NOT NULL,
+            reported_by INT NOT NULL,
+            reason TEXT,
+            status ENUM('pending','reviewed','dismissed') NOT NULL DEFAULT 'pending',
+            reviewed_by INT NULL,
+            reviewed_at TIMESTAMP NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (post_id) REFERENCES community_posts(id) ON DELETE CASCADE,
+            FOREIGN KEY (reported_by) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL
+        );
+    """)
+
+    # Reactions for public posts/comments
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS reactions (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            post_id INT NULL,
+            comment_id INT NULL,
+            reaction_type ENUM('like','dislike','applause','insightful') NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (post_id) REFERENCES community_posts(id) ON DELETE CASCADE,
+            FOREIGN KEY (comment_id) REFERENCES post_comments(id) ON DELETE CASCADE
+        );
+    """)
+
+    # Reactions for group posts/comments
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS reactions_group (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            post_id INT NULL,
+            comment_id INT NULL,
+            reaction_type ENUM('like','dislike','applause','insightful') NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (post_id) REFERENCES group_posts(id) ON DELETE CASCADE,
+            FOREIGN KEY (comment_id) REFERENCES group_post_comments(id) ON DELETE CASCADE
+        );
+    """)
+
+    # Bookmarks table (users can bookmark community posts or award references)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS bookmarks (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            post_id INT NULL,
+            award_reference VARCHAR(255) NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (post_id) REFERENCES community_posts(id) ON DELETE CASCADE
+        );
+    """)
+
+    # Notifications table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS notifications (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            type VARCHAR(100) NOT NULL,
+            content TEXT NOT NULL,
+            is_read BOOLEAN NOT NULL DEFAULT FALSE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+    """)
+
+    # Many-to-many mappings for public posts and tags
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS post_tags (
+            post_id INT NOT NULL,
+            tag_id INT NOT NULL,
+            PRIMARY KEY (post_id, tag_id),
+            FOREIGN KEY (post_id) REFERENCES community_posts(id) ON DELETE CASCADE,
+            FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+        );
+    """)
+
+    # Many-to-many mappings for group posts and tags
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS post_tags_group (
+            post_id INT NOT NULL,
+            tag_id INT NOT NULL,
+            PRIMARY KEY (post_id, tag_id),
+            FOREIGN KEY (post_id) REFERENCES group_posts(id) ON DELETE CASCADE,
+            FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
         );
     """)
 
