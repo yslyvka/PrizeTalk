@@ -5,33 +5,87 @@
 @tailwind utilities;
 
 :root {
-  --color-background: #ffffff;
-  --color-text: #000000;
-  --color-heading: #1a1a1a;
-  --color-text-muted: #666666;
-  --color-background-soft: #f9f9f9;
-  --color-background-mute: #f0f0f0;
-  --color-border: #e0e0e0;
-  --color-border-hover: #cccccc;
-  --color-button-bg: #007bff;
-  --color-button-text: #ffffff;
-  --color-button-hover-bg: #0056b3;
-  --button-radius: 8px;
+  /* Light mode - Your brand colors */
+  --night-bordeaux: #5e0b15;
+  --burnt-rose: #90323d;
+  --pale-oak: #d9cab3;
+  --bronze: #bc8034;
+  --dusty-taupe: #8c7a6b;
+  
+  /* Core theme variables */
+  --color-background: #faf8f5;
+  --color-text: #3a2f28;
+  --color-heading: #5e0b15;
+  --color-text-muted: #8c7a6b;
+  
+  /* Surface colors */
+  --color-background-soft: #ffffff;
+  --color-background-mute: rgba(217, 202, 179, 0.15);
+  --color-background-accent: #90323d;
+  
+  /* Borders */
+  --color-border: #d9cab3;
+  --color-border-hover: #bc8034;
+  
+  /* Buttons */
+  --color-button-bg: #90323d;
+  --color-button-text: #faf8f5;
+  --color-button-hover-bg: #5e0b15;
+  
+  /* Secondary button */
+  --color-button-secondary-bg: #bc8034;
+  --color-button-secondary-hover: #a06b28;
+  
+  /* Accents */
+  --color-accent: #bc8034;
+  --color-accent-hover: #90323d;
+  
+  --button-radius: 12px;
+  --card-radius: 12px;
+  --shadow: 0 2px 8px rgba(94, 11, 21, 0.08);
+  --shadow-hover: 0 4px 16px rgba(94, 11, 21, 0.12);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-background: #1a1a1a;
-    --color-text: #ffffff;
-    --color-heading: #f0f0f0;
-    --color-text-muted: #cccccc;
-    --color-background-soft: #2a2a2a;
-    --color-background-mute: #333333;
-    --color-border: #444444;
-    --color-border-hover: #666666;
-    --color-button-bg: #007bff;
+    /* Dark mode - Blue palette */
+    --midnight-blue: #0f172a;
+    --deep-blue: #1e293b;
+    --ocean-blue: #3b82f6;
+    --sky-blue: #60a5fa;
+    --slate: #475569;
+    --slate-light: #64748b;
+    
+    /* Core theme variables */
+    --color-background: #0a0f1e;
+    --color-text: #e2e8f0;
+    --color-heading: #f1f5f9;
+    --color-text-muted: #94a3b8;
+    
+    /* Surface colors */
+    --color-background-soft: #1e293b;
+    --color-background-mute: rgba(59, 130, 246, 0.1);
+    --color-background-accent: #3b82f6;
+    
+    /* Borders */
+    --color-border: #334155;
+    --color-border-hover: #3b82f6;
+    
+    /* Buttons */
+    --color-button-bg: #3b82f6;
     --color-button-text: #ffffff;
-    --color-button-hover-bg: #0056b3;
+    --color-button-hover-bg: #2563eb;
+    
+    /* Secondary button */
+    --color-button-secondary-bg: #60a5fa;
+    --color-button-secondary-hover: #3b82f6;
+    
+    /* Accents */
+    --color-accent: #60a5fa;
+    --color-accent-hover: #3b82f6;
+    
+    --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.4);
   }
 }
 
@@ -39,19 +93,23 @@
   html,
   body {
     min-height: 100%;
-    background-color: var(--color-background);
+    background: linear-gradient(135deg, var(--color-background) 0%, var(--midnight-blue, #f0e9dd) 100%);
     color: var(--color-text);
     font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     line-height: 1.6;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    html,
+    body {
+      background: linear-gradient(135deg, #0a0f1e 0%, #1e293b 100%);
+    }
   }
 
   body {
     margin: 0;
     display: flex;
     flex-direction: column;
-    background-image: radial-gradient(circle at top, rgba(0, 123, 255, 0.08), transparent 55%),
-      radial-gradient(circle at bottom, rgba(0, 86, 179, 0.08), transparent 45%);
-    background-attachment: fixed;
   }
 
   #app {

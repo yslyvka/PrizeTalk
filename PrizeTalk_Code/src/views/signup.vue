@@ -246,7 +246,6 @@ const handleSubmit = () => {
       submitError.value = ''
       submitSuccess.value = data?.message || 'Account created successfully.'
 
-      // ✅ Build payload in the same shape as login
       const payload = {
         userId: data?.user?.id,
         username: `${firstName.value} ${lastName.value}`,
@@ -255,12 +254,11 @@ const handleSubmit = () => {
         kind: 'staff'
       }
 
-      // ✅ Save to localStorage using the same keys as login.vue
       localStorage.setItem('loggedInUser', JSON.stringify(payload))
       localStorage.setItem('loggedIn', 'true')
       localStorage.setItem('userRole', payload.role)
 
-      // ✅ Fire events so App.vue reacts
+      
       window.dispatchEvent(new Event('auth-state-changed'))
 
       // Redirect to awards page
