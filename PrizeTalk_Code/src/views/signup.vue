@@ -246,25 +246,24 @@ const handleSubmit = () => {
       submitError.value = ''
       submitSuccess.value = data?.message || 'Account created successfully.'
 
-      try {
-        const payload = {
-          email: email.value,
-          role: data?.user?.role || role.value,
-          firstName: firstName.value,
-          lastName: lastName.value,
-        }
-        window.localStorage.setItem('ap_staff_auth', JSON.stringify(payload))
-        window.localStorage.setItem('loggedIn', 'true')
-        window.dispatchEvent(
-          new CustomEvent('staff-auth-changed', {
-            detail: { isLoggedIn: true, user: payload },
-          }),
-        )
-        window.dispatchEvent(new Event('auth-state-changed'))
-      } catch (e) {
-        console.error('Failed to persist staff auth state', e)
+      // ✅ Build payload in the same shape as login
+      const payload = {
+        userId: data?.user?.id,
+        username: `${firstName.value} ${lastName.value}`,
+        email: email.value,
+        role: data?.user?.role || role.value,
+        kind: 'staff'
       }
 
+      // ✅ Save to localStorage using the same keys as login.vue
+      localStorage.setItem('loggedInUser', JSON.stringify(payload))
+      localStorage.setItem('loggedIn', 'true')
+      localStorage.setItem('userRole', payload.role)
+
+      // ✅ Fire events so App.vue reacts
+      window.dispatchEvent(new Event('auth-state-changed'))
+
+      // Redirect to awards page
       router.push('/awards')
     })
     .catch((error) => {
@@ -283,6 +282,7 @@ const handleSubmit = () => {
       isSubmitting.value = false
     })
 }
+
 </script>
 
 <style scoped>
