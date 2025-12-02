@@ -1,6 +1,7 @@
 <template>
   <nav>
     <router-link v-if="!isLoggedIn" to="/">Home</router-link>
+    <router-link v-if="isLoggedIn && userRole === 'staff_admin'" to="/remove">Delete Users</router-link>
     <router-link v-if="!isLoggedIn" to="/login">Login</router-link>
     <router-link v-if="!isLoggedIn" to="/signup">Signup</router-link>
     <router-link v-if="isLoggedIn" to="/awards">Awards</router-link>
@@ -16,6 +17,7 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 const isLoggedIn = ref(false)
+const userRole = ref(null)
 
 const handleAuthEvent = () => {
   checkLoginStatus()
@@ -38,6 +40,7 @@ watch(() => router.currentRoute.value, () => {
 
 const checkLoginStatus = () => {
   isLoggedIn.value = localStorage.getItem('loggedIn') === 'true'
+  userRole.value = localStorage.getItem('userRole')
 }
 
 const signOut = () => {
@@ -45,7 +48,10 @@ const signOut = () => {
   localStorage.removeItem('ap_org_auth')
   localStorage.removeItem('ap_business_auth')
   localStorage.setItem('loggedIn', 'false')
+
   isLoggedIn.value = false
+  localStorage.removeItem('userRole')
+
   window.dispatchEvent(new CustomEvent('staff-auth-changed', { detail: { isLoggedIn: false, user: null } }))
   window.dispatchEvent(new CustomEvent('org-auth-changed', { detail: { isLoggedIn: false, user: null } }))
   window.dispatchEvent(new CustomEvent('business-auth-changed', { detail: { isLoggedIn: false, user: null } }))
