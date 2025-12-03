@@ -17,7 +17,7 @@ configuration = {
     "host": "127.0.0.1",
     "port": 3306,
     "user": "root",
-    "password": "Ternopil@2007",  # Update with your MySQL password
+    "password": "abcd1234",  # Update with your MySQL password
     "database": "prizetalk",
     "allow_local_infile": True
 }
@@ -68,9 +68,10 @@ def create_tables(cursor):
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS tags (
             id INT AUTO_INCREMENT PRIMARY KEY,
-            name VARCHAR(100) NOT NULL UNIQUE
+            tag_name VARCHAR(100) UNIQUE NOT NULL
         );
     """)
+
 
     # Discussion groups table
     cursor.execute("""
@@ -272,8 +273,8 @@ def create_tables(cursor):
     # Many-to-many mappings for public posts and tags
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS post_tags (
-            post_id INT NOT NULL,
-            tag_id INT NOT NULL,
+            post_id INT,
+            tag_id INT,
             PRIMARY KEY (post_id, tag_id),
             FOREIGN KEY (post_id) REFERENCES community_posts(id) ON DELETE CASCADE,
             FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE

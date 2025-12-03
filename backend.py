@@ -4,6 +4,7 @@ import mysql.connector
 import bcrypt
 import platform
 import os
+from datetime import datetime
 
 ALLOWED_ROLES = {'user', 'moderator', 'admin', 'data_curator', 'staff_admin'}
 
@@ -26,7 +27,7 @@ config = {
     "host": host,
     "port": 3306,
     "user": "root",
-    "password": "",  # Update with your MySQL password
+    "password": "abcd1234",  # Update with your MySQL password
     "database": "prizetalk",
 }
 
@@ -83,17 +84,18 @@ def login():
         last_name = name_parts[1] if len(name_parts) > 1 else ''
 
         response = {
-            'kind': 'staff',  # Staff dashboard is the only implemented flow for now
+            'kind': 'staff',
             'account': {
+                'id': user['id'],
+                'username': user['username'],
                 'email': email,
                 'firstName': first_name,
                 'lastName': last_name,
-            },
-            'staff': {
-                'role': role,
+                'role': role
             },
             'message': 'Login successful',
         }
+
         return jsonify(response)
     except Exception as e:
         conn.rollback()
@@ -156,10 +158,298 @@ def signup():
         return jsonify({'success': False, 'message': 'Email already exists'}), 409
     except Exception as e:
         conn.rollback()
+        print("SIGNUP RECEIVED:", data)
+        print("ROLE BEFORE CHECK:", role)
+        print("ALLOWED:", ALLOWED_ROLES)
+
+        print("SIGNUP ERROR:", repr(e))
         return jsonify({'success': False, 'message': str(e)}), 500
     finally:
         cursor.close()
         conn.close()
+
+@app.route("/api/profiles/<int:user_id>/follow/", methods=["POST"])
+def follow_user(user_id):
+    data = request.json
+    current_user_id = data.get("current_user_id")  # Pass current user from frontend or auth
+    if current_user_id == user_id:
+        return jsonify({"error": "Cannot follow yourself"}), 400
+
+    conn, cursor = get_db()
+    try:
+        # Check if already following
+        cursor.execute("""
+            SELECT * FROM follows
+            WHERE follower_id = %s AND following_id = %s
+        """, (current_user_id, user_id))
+        follow = cursor.fetchone()
+
+        if follow:
+            # Unfollow
+            cursor.execute("""
+                DELETE FROM follows
+                WHERE follower_id = %s AND following_id = %s
+            """, (current_user_id, user_id))
+            cursor.execute("""
+                UPDATE user_profiles SET followers_count = followers_count - 1
+                WHERE user_id = %s
+            """, (user_id,))
+            cursor.execute("""
+                UPDATE user_profiles SET following_count = following_count - 1
+                WHERE user_id = %s
+            """, (current_user_id,))
+            conn.commit()
+            return jsonify({"status": "unfollowed"})
+
+        # Create follow
+        cursor.execute("""
+            INSERT INTO follows (follower_id, following_id, created_at)
+            VALUES (%s, %s, %s)
+        """, (current_user_id, user_id, datetime.utcnow()))
+        cursor.execute("""
+            UPDATE user_profiles SET followers_count = followers_count + 1
+            WHERE user_id = %s
+        """, (user_id,))
+        cursor.execute("""
+            UPDATE user_profiles SET following_count = following_count + 1
+            WHERE user_id = %s
+        """, (current_user_id,))
+        conn.commit()
+        return jsonify({"status": "following"})
+    finally:
+        cursor.close()
+        conn.close()
+        
+@app.route("/api/community/", methods=["GET"])       
+def get_posts():
+    category_id = request.args.get("category_id")
+    if category_id:
+        try:
+            category_id = int(category_id)
+        except ValueError:
+            return jsonify({"error": "Invalid category_id"}), 400
+
+    tags_filter = request.args.get("tags")
+    following = request.args.get("following")
+    current_user_id = request.args.get("current_user_id")
+
+    conn, cursor = get_db(dictionary=True)
+    try:
+        query = """
+            SELECT cp.id, cp.user_id, cp.category_id, cp.title, cp.content, cp.created_at,
+                u.username,
+                IFNULL(likes_count.count, 0) AS likes_count,
+                IFNULL(comments_count.count, 0) AS comments_count
+            FROM community_posts cp
+            JOIN users u ON cp.user_id = u.id
+            LEFT JOIN (
+                SELECT post_id, COUNT(*) AS count
+                FROM reactions
+                GROUP BY post_id
+            ) AS likes_count ON cp.id = likes_count.post_id
+            LEFT JOIN (
+                SELECT post_id, COUNT(*) AS count
+                FROM post_comments
+                GROUP BY post_id
+            ) AS comments_count ON cp.id = comments_count.post_id
+            WHERE 1=1
+        """
+        params = []
+
+        if category_id:
+            query += " AND cp.category_id = %s"
+            params.append(category_id)
+
+        if following == "true" and current_user_id:
+            cursor.execute("SELECT following_id FROM follows WHERE follower_id = %s", (current_user_id,))
+            followed_ids = [row['following_id'] for row in cursor.fetchall()]
+            if followed_ids:
+                placeholders = ",".join(["%s"] * len(followed_ids))
+                query += f" AND cp.user_id IN ({placeholders})"
+                params.extend(followed_ids)
+
+        if tags_filter:
+            tag_list = [t.strip().lower() for t in tags_filter.split(",") if t.strip()]
+            if tag_list:
+                placeholders = ",".join(["%s"] * len(tag_list))
+                query += f"""
+                    AND cp.id IN (
+                        SELECT pt.post_id
+                        FROM post_tags pt
+                        JOIN tags t ON pt.tag_id = t.id
+                        WHERE t.tag_name IN ({placeholders})
+                        GROUP BY pt.post_id
+                        HAVING COUNT(DISTINCT t.tag_name) = %s
+                    )
+                """
+                params.extend(tag_list)
+                params.append(len(tag_list))
+
+        query += " ORDER BY cp.created_at DESC"
+        cursor.execute(query, tuple(params))
+        posts = cursor.fetchall()
+
+        # Fetch all tags at once
+        post_ids = [post['id'] for post in posts]
+        if post_ids:
+            placeholders = ",".join(["%s"] * len(post_ids))
+            cursor.execute(f"""
+                SELECT pt.post_id, t.tag_name
+                FROM post_tags pt
+                JOIN tags t ON pt.tag_id = t.id
+                WHERE pt.post_id IN ({placeholders})
+            """, tuple(post_ids))
+            tag_rows = cursor.fetchall()
+            tags_map = {}
+            for row in tag_rows:
+                tags_map.setdefault(row['post_id'], []).append(row['tag_name'])
+            for post in posts:
+                post['tags'] = tags_map.get(post['id'], [])
+
+        return jsonify(posts)
+
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.route("/api/comments/<int:post_id>/", methods=["GET"])
+def get_comments(post_id):
+    conn, cursor = get_db()
+    try:
+        cursor.execute("""
+            SELECT c.*, u.username, u.email
+            FROM comments c
+            JOIN users u ON c.author_id = u.id
+            WHERE c.post_id = %s AND c.parent_comment_id IS NULL
+            ORDER BY created_at ASC
+        """, (post_id,))
+        comments = cursor.fetchall()
+        return jsonify(comments)
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.route("/api/community/", methods=["POST"])
+def create_community_post():
+    """
+    Expects JSON:
+    {
+        "user_id": int,
+        "category_id": int,
+        "title": str,
+        "content": str,
+        "tags": ["tag1", "tag2"]
+    }
+    """
+    data = request.json
+    user_id = data.get("user_id")
+    category_id = data.get("category_id")
+    title = data.get("title")
+    content = data.get("content")
+    tags = data.get("tags", [])
+
+    if not all([user_id, category_id, title, content]):
+        return jsonify({"error": "Missing required fields"}), 400
+
+    conn, cursor = get_db(dictionary=True)
+    try:
+        # Insert post
+        cursor.execute(
+            """
+            INSERT INTO community_posts (user_id, category_id, title, content)
+            VALUES (%s, %s, %s, %s)
+            """,
+            (user_id, category_id, title, content),
+        )
+        post_id = cursor.lastrowid
+
+        # Insert tags if any
+        tag_ids = []
+        for tag_name in tags:
+            tag_name = tag_name.lower().strip()
+            if not tag_name:
+                continue
+            # Insert new tag if it doesn't exist
+            cursor.execute(
+                "INSERT IGNORE INTO tags (tag_name) VALUES (%s)", (tag_name,)
+            )
+            # Get tag ID
+            cursor.execute("SELECT id FROM tags WHERE tag_name = %s", (tag_name,))
+            tag_row = cursor.fetchone()
+            if tag_row:
+                tag_ids.append(tag_row['id'])
+        
+        # Link post to tags
+        for tag_id in tag_ids:
+            cursor.execute(
+                "INSERT INTO post_tags (post_id, tag_id) VALUES (%s, %s) ON DUPLICATE KEY UPDATE post_id=post_id",
+                (post_id, tag_id)
+            )
+
+        conn.commit()
+
+        # Fetch the created post to return
+        cursor.execute(
+            """
+            SELECT cp.id, cp.user_id, cp.category_id, cp.title, cp.content, cp.created_at,
+                   u.username
+            FROM community_posts cp
+            JOIN users u ON cp.user_id = u.id
+            WHERE cp.id = %s
+            """,
+            (post_id,),
+        )
+        post = cursor.fetchone()
+
+        # Attach tags
+        post['tags'] = tags
+
+        return jsonify(post), 201
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": f"Failed to create post: {e}"}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.route("/api/community/<int:post_id>/", methods=["DELETE"])
+def delete_community_post(post_id):
+    data = request.json
+    current_user_id = data.get("current_user_id")
+
+    if not current_user_id:
+        return jsonify({"error": "Must provide current_user_id"}), 400
+
+    conn, cursor = get_db(dictionary=True)
+    try:
+        # Check user's role
+        cursor.execute("""
+            SELECT role 
+            FROM user_roles 
+            WHERE user_id = %s
+            ORDER BY assigned_at DESC 
+            LIMIT 1
+        """, (current_user_id,))
+        row = cursor.fetchone()
+        role = row['role'] if row else 'user'
+
+        if role != 'staff_admin':
+            return jsonify({"error": "Unauthorized"}), 403
+
+        # Delete the post
+        cursor.execute("DELETE FROM community_posts WHERE id = %s", (post_id,))
+        conn.commit()
+
+        return jsonify({"success": True, "message": "Post deleted"})
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": f"Failed to delete post: {e}"}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
 
 if __name__ == '__main__':
     app.run(debug=True)
