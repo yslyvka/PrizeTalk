@@ -17,7 +17,7 @@ configuration = {
     "host": "127.0.0.1",
     "port": 3306,
     "user": "root",
-    "password": "abcd1234",  # Update with your MySQL password
+    "password": "domdh361",  # Update with your MySQL password
     "database": "prizetalk",
     "allow_local_infile": True
 }
