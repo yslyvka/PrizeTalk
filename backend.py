@@ -4,7 +4,17 @@ import mysql.connector
 import bcrypt
 import platform
 import os
-from datetime import datetime
+from datetime import datetime, date
+from decimal import Decimal
+
+AWARD_TABLES = {
+    "booker_prize": "Booker Prize",
+    "golden_globes": "Golden Globes",
+    "grammy": "Grammy Awards",
+    "nobel_laureates": "Nobel Laureates",
+    "nobel_prizes": "Nobel Prizes",
+    "oscars": "Oscars",
+}
 
 ALLOWED_ROLES = {'user', 'moderator', 'admin', 'data_curator', 'staff_admin'}
 
@@ -27,7 +37,7 @@ config = {
     "host": host,
     "port": 3306,
     "user": "root",
-    "password": "abcd1234",  # Update with your MySQL password
+    "password": "domdh361",  # Update with your MySQL password
     "database": "prizetalk",
 }
 
@@ -36,6 +46,89 @@ def get_db(dictionary=False):
     connection = mysql.connector.connect(**config)
     cursor = connection.cursor(dictionary=dictionary)
     return connection, cursor
+
+@app.route("/api/awards/tables/", methods=["GET"])
+def list_award_tables():
+    conn, cursor = get_db(dictionary=True)
+    try:
+        placeholders = ", ".join(["%s"] * len(AWARD_TABLES))
+        cursor.execute(
+            f"""
+            SELECT TABLE_NAME AS table_name, TABLE_ROWS AS table_rows
+            FROM information_schema.tables
+            WHERE table_schema = %s AND table_name IN ({placeholders})
+            """,
+            [config["database"], *AWARD_TABLES.keys()],
+        )
+        table_info = {
+            row["table_name"]: row.get("table_rows", 0) for row in cursor.fetchall()
+        }
+        response = [
+            {
+                "table": table_name,
+                "display_name": AWARD_TABLES[table_name],
+                "row_count": int(table_info.get(table_name) or 0),
+            }
+            for table_name in AWARD_TABLES.keys()
+        ]
+        return jsonify(response)
+    except Exception as e:
+        return jsonify({"error": f"Failed to load award tables: {e}"}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.route("/api/awards/tables/<table_name>/", methods=["GET"])
+def get_award_table_data(table_name):
+    if table_name not in AWARD_TABLES:
+        return jsonify({"error": "Unknown award table"}), 404
+
+    try:
+        limit = int(request.args.get("limit", 50))
+        offset = int(request.args.get("offset", 0))
+    except ValueError:
+        return jsonify({"error": "limit and offset must be integers"}), 400
+
+    # Safety caps
+    limit = max(1, min(limit, 200))
+    offset = max(0, offset)
+
+    conn, cursor = get_db(dictionary=True)
+    try:
+        query = f"SELECT * FROM {table_name} LIMIT %s OFFSET %s"
+        cursor.execute(query, (limit, offset))
+        raw_rows = cursor.fetchall()
+        columns = list(cursor.column_names) if hasattr(cursor, "column_names") else (list(raw_rows[0].keys()) if raw_rows else [])
+
+        def _serialize_value(value):
+            if isinstance(value, Decimal):
+                return float(value)
+            if isinstance(value, (datetime, date)):
+                return value.isoformat()
+            return value
+
+        rows = []
+        for row in raw_rows:
+            shaped = {}
+            for col in row.keys():
+                shaped[col] = _serialize_value(row.get(col))
+            rows.append(shaped)
+
+        return jsonify(
+            {
+                "table": table_name,
+                "display_name": AWARD_TABLES[table_name],
+                "columns": columns,
+                "rows": rows,
+                "limit": limit,
+                "offset": offset,
+            }
+        )
+    except Exception as e:
+        return jsonify({"error": f"Failed to load table data: {e}"}), 500
+    finally:
+        cursor.close()
+        conn.close()
 
 @app.route('/api/auth/login/', methods=['POST'])
 def login():
