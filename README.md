@@ -86,17 +86,13 @@ npm -v
 
 ## 🚀 Getting Started
 
-Assuming you are currently in a WSL terminal and within MySQL workbench you have created a local MySQL connection called 'prizetalk' and within created a database called prizetalk using the command "CREATE DATABASE prizetalk;":
+Assuming you are currently in a WSL terminal and within MySQL workbench here is what you have to do to run this:
 
 1. Clone the repo:
    ```bash
    git clone <link>
    ```
-2. Navigate to the project directory:
-   ```bash
-   cd PrizeTalk/PrizeTalk_Code
-   ```
-3. Install dependencies:
+2. Install dependencies:
    ```bash
    npm install
    npm install vue-router@4
@@ -108,11 +104,11 @@ Assuming you are currently in a WSL terminal and within MySQL workbench you have
    npm install -D @vue/tsconfig
    npm install -D @tailwindcss/postcss
    ```
-4. Run the project:
+3. Run the project:
    ```bash
-   cd .. 
    python3 -m venv venv
    source venv/bin/activate
+   pip install flask flask-cors mysql-connector-python bcrypt pandas sqlalchemy requests
    python3 run_all.py
    ```
 5. Once you have run the python script called run_all.py it should handle loading all the tables into the local instance of the mysql database and then just click on the link created to access the project, it should say something like this: 'Local:   http://localhost:5173/'.
