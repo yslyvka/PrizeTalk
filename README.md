@@ -104,10 +104,15 @@ Assuming you are currently in a WSL terminal and within MySQL workbench you have
    pip install flask flask-cors bcrypt
    npm install -D tailwindcss postcss autoprefixer
    npm install @heroicons/vue
+   npm install @vitejs/plugin-vue --save-dev
+   npm install -D @vue/tsconfig
+   npm install -D @tailwindcss/postcss
    ```
 4. Run the project:
    ```bash
    cd .. 
+   python3 -m venv venv
+   source venv/bin/activate
    python3 run_all.py
    ```
 5. Once you have run the python script called run_all.py it should handle loading all the tables into the local instance of the mysql database and then just click on the link created to access the project, it should say something like this: 'Local:   http://localhost:5173/'.
