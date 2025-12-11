@@ -12,11 +12,11 @@
         </div>
       </div>
 
-      <button v-if="post.is_following_author" class="follow-btn following">
-        Following
-      </button>
-      <button v-else class="follow-btn" @click="$emit('follow', post.author.id)">
-        Follow
+      <button
+        :class="['bookmark-btn', { following: post.is_bookmarked }]"
+        @click="toggleBookmark"
+      >
+        {{ post.is_bookmarked ? 'Bookmarked' : 'Bookmark' }}
       </button>
     </div>
 
@@ -43,14 +43,27 @@
 
     <div class="post-actions">
       <button 
-        :class="['action-btn', { liked: post.is_liked }]"
-        @click="$emit('like', post.id)"
+        :class="['action-btn', { liked: post.user_reaction === 'like' }]"
+        @click="() => toggleReaction('like')"
       >
-        <span class="icon" style="font-size: 1.5em;">{{ post.is_liked ? '♥︎' : '♡' }}</span>
+        <span class="icon" style="font-size: 1.5em;">
+          {{ post.user_reaction === 'like' ? '♥︎' : '♡' }}
+        </span>
         <span>{{ post.likes_count }}</span>
       </button>
 
-      <button class="action-btn" @click="$emit('comment', post.id)">
+      <button 
+        :class="['action-btn', { liked: post.user_reaction === 'dislike' }]"
+        @click="() => toggleReaction('dislike')"
+      >
+        <span class="icon" style="font-size: 1.5em;">
+          {{ post.user_reaction === 'dislike' ? '🅧' : 'Ⓧ' }}
+        </span>
+        <span>{{ post.dislikes_count }}</span>
+      </button>
+
+
+      <button class="action-btn" @click="toggleComments">
         <span class="icon" style="font-size: 2.0em;">✍︎</span>
         <span>{{ post.comments_count }}</span>
       </button>
@@ -67,11 +80,63 @@
         Delete
       </button>
     </div>
+        <!-- Comments Section -->
+    <div v-if="showComments" class="comments-section">
+      <div class="comments-header">
+        <h3>Comments ({{ comments.length }})</h3>
+      </div>
+
+      <div class="comment-form">
+        <textarea 
+          v-model="newComment"
+          placeholder="Write a comment..."
+          rows="3"
+          class="comment-input"
+        ></textarea>
+
+        <button 
+          @click="submitComment"
+          :disabled="!newComment.trim() || submitting"
+          class="submit-comment-btn"
+        >
+          {{ submitting ? 'Posting...' : 'Post Comment' }}
+        </button>
+      </div>
+
+      <div class="comments-list">
+        <div 
+          v-for="comment in comments" 
+          :key="comment.id"
+          class="comment-item"
+        >
+          <div class="comment-header">
+            <span class="comment-author">{{ comment.username }}</span>
+            <span class="comment-time">{{ formatTime(comment.created_at) }}</span>
+          </div>
+
+          <p class="comment-text">{{ comment.comment_text }}</p>
+
+          <button 
+            v-if="canDeleteComment(comment)"
+            @click="deleteComment(comment.id)"
+            class="delete-comment-btn"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+
+      <div v-if="loadingComments" class="loading-comments">
+        <div class="spinner-small"></div>
+        <span>Loading comments...</span>
+      </div>
+    </div>
+
   </article>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import axios from 'axios'
 
 const props = defineProps({
@@ -80,7 +145,7 @@ const props = defineProps({
   currentUserRole: String,
 })
 
-const emit = defineEmits(['like', 'comment', 'follow', 'deleted'])
+const emit = defineEmits(['like', 'comment', 'bookmark', 'deleted'])
 
 const API_BASE_URL = (
   import.meta.env.VITE_API_BASE_URL ||
@@ -134,6 +199,125 @@ const formatTime = (timestamp) => {
   if (diffSeconds > 0) return `${diffSeconds}s ago`;
   return 'just now';
 };
+
+const showComments = ref(false)
+const comments = ref([])
+const newComment = ref('')
+const loadingComments = ref(false)
+const submitting = ref(false)
+
+const toggleComments = async () => {
+  showComments.value = !showComments.value
+
+  if (showComments.value && comments.value.length === 0) {
+    await fetchComments()
+  }
+}
+
+const fetchComments = async () => {
+  loadingComments.value = true
+  try {
+    const { data } = await axios.get(
+      `${API_BASE_URL}/api/community/${props.post.id}/comments/`
+    )
+    comments.value = data
+  } finally {
+    loadingComments.value = false
+  }
+}
+
+const submitComment = async () => {
+  submitting.value = true
+  try {
+    const { data } = await axios.post(
+      `${API_BASE_URL}/api/community/${props.post.id}/comments/`,
+      {
+        user_id: props.currentUserId,
+        comment_text: newComment.value
+      }
+    )
+    comments.value.push(data)
+    props.post.comments_count++
+    emit('comment', { postId: props.post.id, newCount: props.post.comments_count })
+    newComment.value = ''
+  } finally {
+    submitting.value = false
+  }
+}
+
+
+const canDeleteComment = (comment) => {
+  return props.currentUserRole === "staff_admin" ||
+         comment.user_id === props.currentUserId
+}
+
+const deleteComment = async (commentId) => {
+  await axios.delete(
+    `${API_BASE_URL}/api/community/${props.post.id}/comments/${commentId}/`,
+    { data: { current_user_id: props.currentUserId } }
+  )
+  comments.value = comments.value.filter(c => c.id !== commentId)
+  props.post.comments_count--
+}
+
+const toggleReaction = async (type) => {
+  if (!props.currentUserId) return // user not logged in
+
+  try {
+    const { data } = await axios.post(
+      `${API_BASE_URL}/api/community/${props.post.id}/react/`,
+      {
+        user_id: props.currentUserId,
+        reaction_type: type, // 'like' or 'dislike'
+      }
+    )
+
+    // Handle backend response
+    switch (data.status) {
+      case 'added':
+        if (type === 'like') props.post.likes_count++
+        else props.post.dislikes_count++
+        props.post.user_reaction = type
+        break
+
+      case 'removed':
+        if (type === 'like') props.post.likes_count = Math.max(0, props.post.likes_count - 1)
+        else props.post.dislikes_count = Math.max(0, props.post.dislikes_count - 1)
+        props.post.user_reaction = null
+        break
+
+      case 'updated':
+        if (type === 'like') {
+          props.post.likes_count++
+          props.post.dislikes_count = Math.max(0, props.post.dislikes_count - 1)
+        } else {
+          props.post.dislikes_count++
+          props.post.likes_count = Math.max(0, props.post.likes_count - 1)
+        }
+        props.post.user_reaction = type
+        break
+    }
+  } catch (err) {
+    console.error("Failed to react:", err)
+    alert("Failed to react to post")
+  }
+}
+
+const toggleBookmark = async () => {
+  if (!props.currentUserId) return
+
+  try {
+    const { data } = await axios.post(
+      `${API_BASE_URL}/api/community/${props.post.id}/bookmark/`,
+      { user_id: props.currentUserId }
+    )
+
+    props.post.is_bookmarked = (data.status === "added")
+  } catch (err) {
+    console.error("Failed to toggle bookmark:", err)
+    alert("Failed to bookmark post")
+  }
+}
 
 </script>
 
@@ -196,7 +380,7 @@ const formatTime = (timestamp) => {
   text-transform: capitalize;
 }
 
-.follow-btn {
+.bookmark-btn {
   padding: 0.375rem 0.875rem;
   border: 2px solid var(--color-button-bg);
   background: transparent;
@@ -207,12 +391,12 @@ const formatTime = (timestamp) => {
   transition: all 0.3s ease;
 }
 
-.follow-btn:hover {
+.bookmark-btn:hover {
   background: var(--color-button-bg);
   color: white;
 }
 
-.follow-btn.following {
+.bookmark-btn.following {
   background: var(--color-button-bg);
   color: white;
 }
@@ -318,6 +502,72 @@ const formatTime = (timestamp) => {
 .delete-btn:hover {
   background: #c43d3d;
   transform: translateY(-1px);
+}
+
+.comments-section {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.comment-form {
+  margin-bottom: 1.5rem;
+}
+
+.comment-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-background-soft);
+  color: var(--color-text);
+  margin-bottom: 0.75rem;
+}
+
+.submit-comment-btn {
+  padding: 0.5rem 1rem;
+  background: var(--color-button-bg);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.comment-item {
+  padding: 1rem;
+  background: var(--color-background-mute);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.comment-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.delete-comment-btn {
+  background: #e54848;
+  border: none;
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+  cursor: pointer;
+}
+
+.comment-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.75rem;
+  border: 2px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-background-soft);
+  color: var(--color-text);
+  margin-bottom: 0.75rem;
 }
 
 </style>

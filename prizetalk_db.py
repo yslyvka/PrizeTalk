@@ -2,6 +2,7 @@ import mysql.connector
 from mysql.connector import Error
 import pandas as pd
 from sqlalchemy import create_engine
+import os
 #import bcrypt
 
 ROLE_CHOICES = (
@@ -12,12 +13,25 @@ ROLE_CHOICES = (
     'staff_admin',
 )
 
+mysql_pwd = os.environ.get("MYSQL_PWD")
+
+conn = mysql.connector.connect(
+    host="127.0.0.1",
+    user="root",
+    password=mysql_pwd
+)
+cursor = conn.cursor()
+
+cursor.execute("CREATE DATABASE IF NOT EXISTS prizetalk")
+cursor.close()
+conn.close()
+
 # --- Database connection configuration ---
 configuration = {
     "host": "127.0.0.1",
     "port": 3306,
     "user": "root",
-    "password": "domdh361",  # Update with your MySQL password
+    "password": mysql_pwd,  # Update with your MySQL password
     "database": "prizetalk",
     "allow_local_infile": True
 }

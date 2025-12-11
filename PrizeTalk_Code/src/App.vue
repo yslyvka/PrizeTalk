@@ -1,11 +1,11 @@
 <template>
   <nav>
     <router-link v-if="!isLoggedIn" to="/">Home</router-link>
-    <router-link v-if="isLoggedIn && userRole === 'staff_admin'" to="/remove">Delete Users</router-link>
     <router-link v-if="!isLoggedIn" to="/login">Login</router-link>
     <router-link v-if="!isLoggedIn" to="/signup">Signup</router-link>
     <router-link v-if="isLoggedIn" to="/awards">Awards</router-link>
     <router-link v-if="isLoggedIn" to="/community">Community</router-link>
+    <router-link v-if="isLoggedIn" to="/groups">Groups</router-link>
     <button v-if="isLoggedIn" @click="signOut" class="sign-out-btn">Sign Out</button>
   </nav>
   <router-view />
