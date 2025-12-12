@@ -189,6 +189,7 @@ const handleSubmit = async () => {
   border-radius: 8px;
   font-size: 0.95rem;
   font-family: inherit;
+  box-sizing: border-box;
   background: var(--color-background-soft);
   color: var(--color-text);
 }
