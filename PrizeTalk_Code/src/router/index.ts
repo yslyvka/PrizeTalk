@@ -6,11 +6,13 @@ import Login from '../views/login.vue'
 import Signup from '../views/signup.vue'
 import Groups from '../views/groupcommunity.vue'
 import GroupDetail from '../views/GroupDetailPage.vue' 
+import AnalyticsDashboard from '../views/AnalyticsPage.vue'
 
 const routes = [
   { path: '/', component: Home },
   { path: '/awards', component: Awards },
   { path: '/community', component: Community },
+  { path: '/analytics', component: AnalyticsDashboard },
   { path: '/groups', component: Groups },
   { 
     path: '/groups/:id',

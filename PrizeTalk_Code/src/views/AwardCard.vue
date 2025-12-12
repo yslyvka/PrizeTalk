@@ -37,7 +37,7 @@
           <span class="info-value">{{ getCeremony() }}</span>
         </div>
         <div v-if="isWinner()" class="info-item">
-          <span class="winner-badge">🏆 Winner</span>
+          <span class="winner-badge">𐃯 Winner</span>
         </div>
       </div>
     </div>
@@ -83,17 +83,17 @@ const showDetails = ref(false)
 const getBadgeIcon = () => {
   const cat = getCategory()?.toLowerCase() || ''
   
-  if (cat.includes('film') || cat.includes('picture') || cat.includes('director')) return '🎬'
-  if (cat.includes('music') || cat.includes('song') || cat.includes('album')) return '🎵'
-  if (cat.includes('literature') || cat.includes('novel') || cat.includes('book')) return '📚'
-  if (cat.includes('peace')) return '🕊️'
-  if (cat.includes('physics')) return '⚛️'
-  if (cat.includes('chemistry')) return '🧪'
-  if (cat.includes('medicine') || cat.includes('physiology')) return '🏥'
-  if (cat.includes('economics') || cat.includes('economic')) return '💰'
-  if (cat.includes('actor') || cat.includes('actress')) return '🎭'
+  if (cat.includes('film') || cat.includes('picture') || cat.includes('director')) return '⏯'
+  if (cat.includes('music') || cat.includes('song') || cat.includes('album')) return '♫'
+  if (cat.includes('literature') || cat.includes('novel') || cat.includes('book')) return '✎'
+  if (cat.includes('peace')) return '☮︎'
+  if (cat.includes('physics')) return '⚛'
+  if (cat.includes('chemistry')) return '⌬'
+  if (cat.includes('medicine') || cat.includes('physiology')) return '✙'
+  if (cat.includes('economics') || cat.includes('economic')) return '$'
+  if (cat.includes('actor') || cat.includes('actress')) return '✮'
   
-  return '🏆'
+  return '𐃯'
 }
 
 const getYear = () => {

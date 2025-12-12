@@ -5,7 +5,8 @@
 @tailwind utilities;
 
 :root {
-  /* Light mode - Your brand colors */
+  /* color scheme generated from ChatGPT */
+  /* Light mode */
   --night-bordeaux: #5e0b15;
   --burnt-rose: #90323d;
   --pale-oak: #d9cab3;
