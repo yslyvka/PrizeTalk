@@ -82,6 +82,17 @@ node -v
 npm -v
 ```
 
+### Visual Assets
+
+#### ER Diagram
+![ER Diagram](ER-diagram.png)
+
+#### Hello Vue Video
+<video width="640" height="360" controls>
+  <source src="hello-vue - Personal - Microsoft​ Edge 2025-12-11 19-26-19.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+
 ---
 
 ## 🚀 Getting Started
