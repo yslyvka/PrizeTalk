@@ -3,6 +3,7 @@ from mysql.connector import Error
 import pandas as pd
 from sqlalchemy import create_engine
 import os
+import platform
 #import bcrypt
 
 ROLE_CHOICES = (
@@ -13,22 +14,22 @@ ROLE_CHOICES = (
     'staff_admin',
 )
 
-mysql_pwd = os.environ.get("MYSQL_PWD")
+# Determine host based on platform
+if platform.system() == 'Windows':
+    host = '127.0.0.1'
+elif platform.system() == 'Darwin':  # macOS
+    host = '127.0.0.1'
+else:  # Linux
+    if os.path.exists('/mnt/c'):  # WSL
+        host = '172.30.128.1'  # Windows host IP from WSL
+    else:  # Native Linux (Ubuntu)
+        host = '127.0.0.1'
 
-conn = mysql.connector.connect(
-    host="127.0.0.1",
-    user="root",
-    password=mysql_pwd
-)
-cursor = conn.cursor()
-
-cursor.execute("CREATE DATABASE IF NOT EXISTS prizetalk")
-cursor.close()
-conn.close()
+mysql_pwd = os.environ.get("MYSQL_PWD") or "Ternopil@2007"
 
 # --- Database connection configuration ---
 configuration = {
-    "host": "127.0.0.1",
+    "host": host,
     "port": 3306,
     "user": "root",
     "password": mysql_pwd,  # Update with your MySQL password
@@ -414,6 +415,19 @@ def run_query(cursor, name, sql, params=None, limit_print=None):
 # --- Main ---
 def main():
     try:
+        # First, connect without database to create it if needed
+        temp_config = configuration.copy()
+        temp_config.pop('database')
+        conn = mysql.connector.connect(**temp_config)
+        cursor = conn.cursor()
+        
+        # Create database if it doesn't exist
+        cursor.execute("CREATE DATABASE IF NOT EXISTS prizetalk")
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        # Now connect to the database
         conn = mysql.connector.connect(**configuration)
         cursor = conn.cursor()
 
