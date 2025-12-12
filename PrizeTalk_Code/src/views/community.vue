@@ -96,7 +96,7 @@ const loggedInUserRole = ref('user')
 const feedTabs = [
   { icon: '☕︎', text: 'Trending', value: 'trending' },
   { icon: '⏱', text: 'Recent', value: 'recent' },
-  { icon: '𐦂𖨆𐀪𖠋', text: 'Following', value: 'following' },
+  { icon: '☑', text: 'Bookmarks', value: 'bookmark' },
 ]
 
 const handlePostDeleted = (postId) => {
@@ -104,30 +104,36 @@ const handlePostDeleted = (postId) => {
 }
 
 const filteredPosts = computed(() => {
-  let filtered = posts.value
+  let filtered = posts.value.slice();
 
-  watch([postTypeFilter, activeTab], () => {
-    fetchPosts()
-  })
+  // Filter for bookmarks tab
+  if (activeTab.value === 'bookmark') {
+    filtered = filtered.filter(p => p.is_bookmarked);
+  }
 
   // Search
   if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase()
+    const query = searchQuery.value.toLowerCase();
     filtered = filtered.filter(p =>
       (p.title && p.title.toLowerCase().includes(query)) ||
       (p.content && p.content.toLowerCase().includes(query)) ||
-      (Array.isArray(p.tags) && p.tags.some(tag => tag && tag.toLowerCase().includes(query)))
-    )
+      (Array.isArray(p.tags) && p.tags.some(tag => tag.toLowerCase().includes(query)))
+    );
   }
 
-  // Sort based on active tab
+  // Sort
   if (activeTab.value === 'trending') {
-    filtered.sort((a, b) => (b.likes_count + b.comments_count) - (a.likes_count + a.comments_count))
+    filtered.sort((a, b) => (b.likes_count + b.comments_count) - (a.likes_count + a.comments_count));
   } else if (activeTab.value === 'recent') {
-    filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   }
 
-  return filtered
+  return filtered;
+});
+
+
+watch([postTypeFilter, activeTab], () => {
+  fetchPosts()
 })
 
 
@@ -135,30 +141,34 @@ const fetchPosts = async () => {
   loading.value = true
   try {
     const params = {}
-    
-    if (activeTab.value === 'following') {
-      params.following = 'true'
-      if (loggedInUserId.value) {
-        params.current_user_id = loggedInUserId.value 
-      } else {
-        console.warn('Cannot fetch "following" posts without a logged in user ID.')
-        loading.value = false;
-        return;
-      }
+
+    // Fetch bookmarks for current user
+    let bookmarks = []
+    if (loggedInUserId.value) {
+      const { data: bookmarked } = await axios.get(`${API_BASE_URL}/api/community/bookmarks/`, {
+        params: { user_id: loggedInUserId.value }
+      })
+      bookmarks = bookmarked.map(p => p.id)
     }
 
-    if (postTypeFilter.value) {
-      params.category_id = postTypeFilter.value
+    if (activeTab.value === 'bookmarks') {
+      posts.value = bookmarked.map(p => ({ ...p, is_bookmarked: true }))
+    } else {
+      if (postTypeFilter.value) params.category_id = postTypeFilter.value
+      const { data } = await axios.get(`${API_BASE_URL}/api/community/`, { params })
+      posts.value = data.map(p => ({ 
+        ...p, 
+        is_bookmarked: bookmarks.includes(p.id) 
+      }))
     }
-
-    const { data } = await axios.get(`${API_BASE_URL}/api/community/`, { params })
-    posts.value = data
-  } catch (error) {
-    console.error('Failed to fetch posts:', error)
+  } catch (err) {
+    console.error(err)
   } finally {
     loading.value = false
   }
 }
+
+
 
 
 const handleComment = (postId) => {
@@ -186,6 +196,17 @@ onMounted(async () => {
   await fetchLoggedInUser();
   fetchPosts();
 })
+
+const trendingPosts = computed(() => {
+  return posts.value
+    .slice()
+    .sort((a, b) => {
+      const aScore = a.likes_count + a.comments_count * 2
+      const bScore = b.likes_count + b.comments_count * 2
+      return bScore - aScore
+    })
+})
+
 </script>
 
 
