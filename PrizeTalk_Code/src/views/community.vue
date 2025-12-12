@@ -299,6 +299,7 @@ const trendingPosts = computed(() => {
   border-radius: 8px;
   font-size: 0.95rem;
   background: var(--color-background-soft);
+  color: var(--color-text);
 }
 
 .search-input {

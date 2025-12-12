@@ -10,7 +10,7 @@
             :class="['tab-btn', { active: activeAward === 'all' }]"
             @click="activeAward = 'all'"
           >
-            🗂️ All Awards
+            ⌕ All Awards
           </button>
           <button 
             v-for="award in awards" 
@@ -62,7 +62,7 @@
       </div>
 
       <div v-else-if="filteredRows.length === 0" class="empty-state">
-        <div class="empty-icon">🏆</div>
+        <div class="empty-icon">𐃯</div>
         <p>No results found</p>
         <p class="empty-hint">Try adjusting your search or select a different award</p>
       </div>
@@ -172,13 +172,13 @@ const displayColumns = computed(() => {
 
 const getAwardIcon = (name) => {
   const icons = {
-    'Booker Prize': '📚',
-    'Golden Globes': '🌟',
-    'Grammy': '🎵',
+    'Booker Prize': '✎ᝰ.',
+    'Golden Globes': '𖧋',
+    'Grammy': '♫',
     'Nobel Prize': '🏅',
-    'Oscars': '🎬'
+    'Oscars': '⏯'
   }
-  return icons[name] || '🏆'
+  return icons[name] || '𐃯'
 }
 
 const formatColumnName = (col) => {

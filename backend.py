@@ -1623,7 +1623,235 @@ def react_to_group_comment(group_id, post_id, comment_id):
         cursor.close()
         conn.close()
 
+@app.route("/api/analytics/award-winners/", methods=["GET"])
+def get_award_winners_analytics():
+    """Get top award winners across different ceremonies"""
+    award_type = request.args.get("award_type", "oscars")
+    limit = int(request.args.get("limit", 10))
+    
+    if award_type not in AWARD_TABLES:
+        return jsonify({"error": "Invalid award type"}), 400
+    
+    conn, cursor = get_db(dictionary=True)
+    try:
+        winners = []
+        
+        if award_type == "oscars":
+            # Oscars: Count winners by Name
+            cursor.execute("""
+                SELECT Name as winner_name,
+                       COUNT(*) as win_count,
+                       MIN(CAST(Year AS UNSIGNED)) as first_win,
+                       MAX(CAST(Year AS UNSIGNED)) as latest_win
+                FROM oscars
+                WHERE Winner = 1 AND Name IS NOT NULL AND Name != ''
+                GROUP BY Name
+                ORDER BY win_count DESC
+                LIMIT %s
+            """, (limit,))
+            winners = cursor.fetchall()
+            
+        elif award_type == "grammy":
+            # Grammy: Count winners by Nominee
+            cursor.execute("""
+                SELECT Nominee as winner_name,
+                       COUNT(*) as win_count,
+                       MIN(Year) as first_win,
+                       MAX(Year) as latest_win
+                FROM grammy
+                WHERE Winner = 1 AND Nominee IS NOT NULL AND Nominee != ''
+                GROUP BY Nominee
+                ORDER BY win_count DESC
+                LIMIT %s
+            """, (limit,))
+            winners = cursor.fetchall()
+            
+        elif award_type == "golden_globes":
+            # Golden Globes: Count winners by title
+            cursor.execute("""
+                SELECT title as winner_name,
+                       COUNT(*) as win_count,
+                       MIN(year) as first_win,
+                       MAX(year) as latest_win
+                FROM golden_globes
+                WHERE winner = 1 AND title IS NOT NULL AND title != ''
+                GROUP BY title
+                ORDER BY win_count DESC
+                LIMIT %s
+            """, (limit,))
+            winners = cursor.fetchall()
+            
+        elif award_type == "booker_prize":
+            # Booker Prize: Count winners by WINNER
+            cursor.execute("""
+                SELECT WINNER as winner_name,
+                       COUNT(*) as win_count,
+                       MIN(YEAR) as first_win,
+                       MAX(YEAR) as latest_win
+                FROM booker_prize
+                WHERE WINNER IS NOT NULL AND WINNER != ''
+                GROUP BY WINNER
+                ORDER BY win_count DESC
+                LIMIT %s
+            """, (limit,))
+            winners = cursor.fetchall()
+            
+        elif award_type == "nobel_prizes":
+            cursor.execute("""
+                SELECT 
+                    full_name AS winner_name,
+                    COUNT(*) AS win_count,
+                    MIN(award_year) AS first_win,
+                    MAX(award_year) AS latest_win
+                FROM nobel_prizes
+                WHERE full_name IS NOT NULL AND full_name != ''
+                GROUP BY full_name
+                ORDER BY win_count DESC
+                LIMIT %s
+            """, (limit,))
+            winners = cursor.fetchall()
 
+        
+        return jsonify(winners)
+    except Exception as e:
+        print(f"Error in award-winners: {e}")
+        return jsonify({"error": f"Failed to fetch winners: {str(e)}"}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.route("/api/analytics/award-trends/", methods=["GET"])
+def get_award_trends():
+    """Get award trends over time"""
+    award_type = request.args.get("award_type", "oscars")
+    
+    if award_type not in AWARD_TABLES:
+        return jsonify({"error": "Invalid award type"}), 400
+    
+    conn, cursor = get_db(dictionary=True)
+    try:
+        trends = []
+        categories = []
+        
+        if award_type == "oscars":
+            # Oscars trends by year
+            cursor.execute("""
+                SELECT CAST(Year AS UNSIGNED) as year, COUNT(*) as awards_count
+                FROM oscars
+                WHERE Winner = 1
+                GROUP BY Year
+                ORDER BY year DESC
+                LIMIT 50
+            """)
+            trends = cursor.fetchall()
+            
+            # Category distribution
+            cursor.execute("""
+                SELECT Category as category, COUNT(*) as count
+                FROM oscars
+                WHERE Winner = 1
+                GROUP BY Category
+                ORDER BY count DESC
+                LIMIT 20
+            """)
+            categories = cursor.fetchall()
+            
+        elif award_type == "grammy":
+            # Grammy trends
+            cursor.execute("""
+                SELECT Year as year, COUNT(*) as awards_count
+                FROM grammy
+                WHERE Winner = 1
+                GROUP BY Year
+                ORDER BY year DESC
+                LIMIT 50
+            """)
+            trends = cursor.fetchall()
+            
+            cursor.execute("""
+                SELECT Award_Type as category, COUNT(*) as count
+                FROM grammy
+                WHERE Winner = 1
+                GROUP BY Award_Type
+                ORDER BY count DESC
+                LIMIT 20
+            """)
+            categories = cursor.fetchall()
+            
+        elif award_type == "golden_globes":
+            cursor.execute("""
+                SELECT year, COUNT(*) as awards_count
+                FROM golden_globes
+                WHERE winner = 1
+                GROUP BY year
+                ORDER BY year DESC
+                LIMIT 50
+            """)
+            trends = cursor.fetchall()
+            
+            cursor.execute("""
+                SELECT award as category, COUNT(*) as count
+                FROM golden_globes
+                WHERE winner = 1
+                GROUP BY award
+                ORDER BY count DESC
+                LIMIT 20
+            """)
+            categories = cursor.fetchall()
+            
+        elif award_type == "booker_prize":
+            cursor.execute("""
+                SELECT YEAR as year, COUNT(*) as awards_count
+                FROM booker_prize
+                GROUP BY YEAR
+                ORDER BY year DESC
+                LIMIT 50
+            """)
+            trends = cursor.fetchall()
+            
+            cursor.execute("""
+                SELECT GENRE as category, COUNT(*) as count
+                FROM booker_prize
+                WHERE GENRE IS NOT NULL
+                GROUP BY GENRE
+                ORDER BY count DESC
+                LIMIT 20
+            """)
+            categories = cursor.fetchall()
+            
+        elif award_type == "nobel_prizes":
+            cursor.execute("""
+                SELECT 
+                    award_year AS year,
+                    COUNT(*) AS awards_count
+                FROM nobel_prizes
+                WHERE award_year IS NOT NULL
+                GROUP BY award_year
+                ORDER BY year DESC
+                LIMIT 50
+            """)
+            trends = cursor.fetchall()
+
+            # Category distribution
+            cursor.execute("""
+                SELECT 
+                    category AS category,
+                    COUNT(*) AS count
+                FROM nobel_prizes
+                WHERE category IS NOT NULL
+                GROUP BY category
+                ORDER BY count DESC
+                LIMIT 20
+            """)
+            categories = cursor.fetchall()
+
+        return jsonify({"trends": trends, "categories": categories})
+    except Exception as e:
+        print(f"Error in award-trends: {e}")
+        return jsonify({"error": f"Failed to fetch trends: {str(e)}"}), 500
+    finally:
+        cursor.close()
+        conn.close()
 
 if __name__ == '__main__':
     app.run(debug=True)
